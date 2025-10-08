@@ -131,12 +131,6 @@ primary_language: "en"
 # Hotkey (pynput format)
 hotkey: "<ctrl>+<alt>+<space>"
 
-# Audio streaming configuration (NEW in v2.0)
-# Duration in seconds for each transcription chunk during long recordings
-# - Shorter values (e.g., 15s): Faster feedback, text appears more quickly
-# - Longer values (e.g., 60s): Better accuracy at chunk boundaries
-chunk_duration: 30
-
 # Model (tiny=fastest, large-v3=most accurate)
 model_size: "tiny"
 
@@ -145,25 +139,6 @@ beam_size: 1        # 1=fastest, 5=most accurate
 vad_filter: true    # Skip silence (recommended)
 device: "cpu"       # "cuda" for GPU acceleration
 compute_type: "int8"  # int8=fastest, float32=highest quality
-```
-
-### 🎙️ Streaming Transcription (NEW!)
-
-For long-form dictation, Whisper Typer UI now uses **streaming transcription** to provide faster feedback:
-
-- **How it works**: Audio is split into chunks (default 30 seconds), transcribed in parallel, and inserted in order
-- **Benefits**: 
-  - 10-minute recording: First text appears in ~35 seconds (vs waiting 20+ minutes for full transcription)
-  - Parallel processing: Multiple chunks transcribe simultaneously using 3 worker threads
-  - Ordered insertion: Text always appears in the correct sequence
-- **Tuning**: Adjust `chunk_duration` in `config.yaml` to balance speed vs accuracy
-  - 15 seconds: Ultra-fast feedback, slight boundary accuracy loss
-  - 30 seconds: Balanced (recommended)
-  - 60 seconds: Maximum accuracy, slower feedback
-
-**Example**:
-```yaml
-chunk_duration: 15  # Aggressive streaming for rapid feedback
 ```
 
 ### Model Comparison
