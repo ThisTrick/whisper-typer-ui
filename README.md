@@ -1,9 +1,9 @@
 # Whisper Typer UI
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/yourusername/whisper-typer-ui)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/ThisTrick/whisper-typer-ui)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey)](https://github.com/yourusername/whisper-typer-ui)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey)](https://github.com/ThisTrick/whisper-typer-ui)
 
 **Fast, privacy-focused voice dictation for your desktop**
 
@@ -33,7 +33,7 @@ Whisper Typer UI transforms your speech into text instantly using OpenAI's Whisp
 sudo apt install xclip python3.11
 
 # Clone and install
-git clone https://github.com/yourusername/whisper-typer-ui.git
+git clone https://github.com/ThisTrick/whisper-typer-ui.git
 cd whisper-typer-ui
 
 # Install with uv (recommended)
@@ -48,7 +48,7 @@ uv run python src/whisper-typer-ui.py
 
 ```powershell
 # Clone repository
-git clone https://github.com/yourusername/whisper-typer-ui.git
+git clone https://github.com/ThisTrick/whisper-typer-ui.git
 cd whisper-typer-ui
 
 # Install with uv
@@ -66,7 +66,7 @@ uv run python src/whisper-typer-ui.py
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Clone and install
-git clone https://github.com/yourusername/whisper-typer-ui.git
+git clone https://github.com/ThisTrick/whisper-typer-ui.git
 cd whisper-typer-ui
 brew install python@3.11
 uv sync
