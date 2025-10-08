@@ -12,7 +12,7 @@ from utils import IconType
 class UIOverlay:
     """Circular overlay UI window."""
     
-    def __init__(self, size: int = 80, margin: int = 20):
+    def __init__(self, size: int = 240, margin: int = 20):
         """Initialize UI overlay window.
         
         Args:
@@ -45,12 +45,12 @@ class UIOverlay:
         self.canvas.pack()
         
         # Draw circle outline
-        padding = 10
+        padding = 30  # Increased for larger UI
         self.circle_id = self.canvas.create_oval(
             padding, padding,
             size - padding, size - padding,
             outline='red',
-            width=3
+            width=9  # Increased from 3 to 9 (3x)
         )
         
         # Icon placeholder
@@ -177,8 +177,8 @@ class UIOverlay:
         if self._pulsation_job:
             self.window.after_cancel(self._pulsation_job)
             self._pulsation_job = None
-        # Reset to default width
-        self.canvas.itemconfig(self.circle_id, width=3)
+        # Reset to default width (3x larger)
+        self.canvas.itemconfig(self.circle_id, width=9)
         # Reset pulsation direction
         if hasattr(self, '_pulsation_direction'):
             delattr(self, '_pulsation_direction')
@@ -188,7 +188,7 @@ class UIOverlay:
         if not self.pulsating:
             return
         
-        # Smooth pulsation between width 2 and 5
+        # Smooth pulsation between width 6 and 15 (3x larger)
         current_width = float(self.canvas.itemcget(self.circle_id, 'width'))
         
         # Toggle between widths for smooth pulsation
@@ -196,12 +196,12 @@ class UIOverlay:
             self._pulsation_direction = 1  # 1 = growing, -1 = shrinking
         
         # Increment/decrement width
-        if current_width >= 5:
+        if current_width >= 15:
             self._pulsation_direction = -1
-        elif current_width <= 2:
+        elif current_width <= 6:
             self._pulsation_direction = 1
         
-        new_width = current_width + (0.5 * self._pulsation_direction)
+        new_width = current_width + (1.5 * self._pulsation_direction)  # 3x step size
         self.canvas.itemconfig(self.circle_id, width=new_width)
         
         # Schedule next pulsation (100ms = 10 FPS for smoother animation)
