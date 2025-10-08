@@ -104,7 +104,7 @@ class UIOverlay:
             return
         
         try:
-            image = Image.open(icon_path)
+            image = Image.open(str(icon_path))  # Convert Path to string
             # Resize to fit inside circle
             icon_size = int(self.size * 0.5)
             image = image.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
@@ -143,8 +143,8 @@ class UIOverlay:
             return
         
         # Toggle between width 3 and 6
-        current_width = int(self.canvas.itemcget(self.circle_id, 'width'))
-        new_width = 6 if current_width == 3 else 3
+        current_width = float(self.canvas.itemcget(self.circle_id, 'width'))
+        new_width = 6 if current_width == 3.0 else 3
         self.canvas.itemconfig(self.circle_id, width=new_width)
         
         # Schedule next pulsation (500ms = 2 Hz)

@@ -21,7 +21,7 @@ class AppConfig:
     # Default values
     DEFAULTS = {
         "primary_language": "en",
-        "hotkey": "<ctrl>+<alt>+space",
+        "hotkey": "<ctrl>+<alt>+<space>",
         "model_size": "base",
         "compute_type": "int8"
     }
