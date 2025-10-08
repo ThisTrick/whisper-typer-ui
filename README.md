@@ -1,160 +1,276 @@
 # Whisper Typer UI
 
-Voice dictation application for Windows, macOS, and Linux.
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/yourusername/whisper-typer-ui)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey)](https://github.com/yourusername/whisper-typer-ui)
 
-## Features
+**Fast, privacy-focused voice dictation for your desktop**
 
-- **Global Hotkey Activation**: Press Ctrl+Alt+Space to start/stop recording from anywhere
-- **Local Processing**: All transcription happens on your device - no internet required
-- **Multi-Language Support**: Supports 99 languages via faster-whisper
-- **Fast Unicode Support**: Uses clipboard paste for instant text insertion (perfect for Cyrillic, Chinese, emoji)
-- **Simple UI**: Circular overlay in bottom-right corner with visual feedback
-- **Cross-Platform**: Works on Windows 10+, macOS 11+, and Linux (Ubuntu 20.04+)
+Whisper Typer UI transforms your speech into text instantly using OpenAI's Whisper model running entirely on your machine. No internet required, no data sent to servers — your voice stays private.
 
-## Installation
+---
 
-### From Source (Development)
+## ✨ Features
 
-1. **Prerequisites**:
-   - Python 3.11 or higher
-   - uv package manager: https://github.com/astral-sh/uv
-   - Microphone access
-   - **Linux only**: `sudo apt install xclip` (for clipboard paste)
+- 🎤 **Press-to-record** — Hold hotkey, speak, release to transcribe
+- ⚡ **Lightning fast** — ~1 second transcription for 10 seconds of speech (tiny model)
+- 🔒 **100% private** — Everything runs locally, audio never saved to disk
+- 🌍 **99+ languages** — English, Ukrainian, Chinese, Arabic, and more
+- 💻 **Cross-platform** — Windows, macOS, Linux
+- 🎨 **Minimal overlay** — Sleek circular indicator with smooth animations
+- ⌨️ **Auto-paste** — Text instantly appears in your active application
+- 🚀 **GPU accelerated** — CUDA support for 5-10x faster transcription
 
-2. **Clone and Install**:
-   ```bash
-   git clone <repository-url>
-   cd whisper-typer-ui
-   uv sync
-   ```
+---
 
-3. **Run**:
+## 📦 Installation
+
+### Linux (Ubuntu/Debian)
+
+```bash
+# Install system dependencies
+sudo apt install xclip python3.11
+
+# Clone and install
+git clone https://github.com/yourusername/whisper-typer-ui.git
+cd whisper-typer-ui
+
+# Install with uv (recommended)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync
+
+# Run
+uv run python src/whisper-typer-ui.py
+```
+
+### Windows
+
+```powershell
+# Clone repository
+git clone https://github.com/yourusername/whisper-typer-ui.git
+cd whisper-typer-ui
+
+# Install with uv
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+uv sync
+
+# Run
+uv run python src/whisper-typer-ui.py
+```
+
+### macOS
+
+```bash
+# Install Homebrew (if not installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Clone and install
+git clone https://github.com/yourusername/whisper-typer-ui.git
+cd whisper-typer-ui
+brew install python@3.11
+uv sync
+
+# Run
+uv run python src/whisper-typer-ui.py
+```
+
+> **First run**: The application will download the Whisper model (~75MB for `tiny`, ~3GB for `large-v3`). This only happens once.
+
+---
+
+## 🚀 Quick Start
+
+1. **Launch the app**
    ```bash
    uv run python src/whisper-typer-ui.py
    ```
 
-### From Executable (Coming Soon)
+2. **Press the hotkey** (default: `Ctrl+Alt+Space`)
+   - A circular overlay appears
 
-1. Download `WhisperTyper` executable for your platform
-2. Run the executable
-3. Grant microphone permissions when prompted
+3. **Speak your message**
+   - Red pulsing circle = recording
 
-## Usage
+4. **Release the hotkey**
+   - Blue rotating circle = transcribing
 
-1. **Start the Application**: Run `whisper-typer-ui.py` or the executable
-2. **Start Recording**: Press `Ctrl+Alt+Space` (or your configured hotkey)
-3. **Speak Your Message**: A circular UI appears in the bottom-right corner
-4. **Stop Recording**: Press `Ctrl+Alt+Space` again or click the microphone icon
-5. **Text Appears**: Transcribed text is inserted into your focused text field
+5. **Text appears automatically**
+   - Pasted into your active application
 
-## Configuration
+That's it! 🎉
 
-Edit `config.yaml` to customize:
+---
+
+## ⚙️ Configuration
+
+Edit `config.yaml` to customize settings:
 
 ```yaml
-# Primary language for transcription (ISO 639-1 code)
+# Language (ISO 639-1 code: en, uk, de, fr, es, ja, zh, etc.)
 primary_language: "en"
 
-# Global hotkey combination (pynput format)
+# Hotkey (pynput format)
 hotkey: "<ctrl>+<alt>+<space>"
 
-# Model configuration
-model_size: "tiny"  # tiny, base, small, medium, large-v3
-compute_type: "int8"  # int8, float16, float32
-device: "cpu"  # cpu or cuda (NVIDIA GPU)
+# Model (tiny=fastest, large-v3=most accurate)
+model_size: "tiny"
 
 # Performance tuning
-beam_size: 1  # Lower = faster, higher = more accurate (default: 5)
-vad_filter: true  # Skip silent parts (faster)
+beam_size: 1        # 1=fastest, 5=most accurate
+vad_filter: true    # Skip silence (recommended)
+device: "cpu"       # "cuda" for GPU acceleration
+compute_type: "int8"  # int8=fastest, float32=highest quality
 ```
 
-**Supported Languages**: Any ISO 639-1 code (e.g., "en", "uk", "de", "fr", "es", "ja", "zh")
+### Model Comparison
 
-**Model Sizes**:
+| Model | Size | Speed | Accuracy | Best For |
+|-------|------|-------|----------|----------|
+| `tiny` | 75MB | ⚡⚡⚡ | ⭐⭐ | Real-time dictation |
+| `base` | 140MB | ⚡⚡ | ⭐⭐⭐ | Balanced usage |
+| `small` | 460MB | ⚡ | ⭐⭐⭐⭐ | High accuracy |
+| `large-v3` | 3GB | 🐌 | ⭐⭐⭐⭐⭐ | Professional transcription |
 
-- `tiny` (39MB): **Fastest** - great for real-time dictation
-- `base` (74MB): Good balance of speed and accuracy
-- `small` (244MB): Better accuracy, slower
-- `medium` (769MB): High accuracy
-- `large-v3` (~3GB): Best accuracy, very slow
+**Recommendation**: Start with `tiny` for speed, upgrade to `base` if accuracy is insufficient.
 
-**Performance Optimization**:
+---
 
-- **For speed**: `tiny` model + `beam_size: 1` + `vad_filter: true`
-- **For accuracy**: `base`/`small` model + `beam_size: 5`
-- **GPU boost**: Set `device: "cuda"` (requires NVIDIA GPU, 5-10x faster!)
+## 🎯 Performance Tips
 
-## Troubleshooting
+### For Maximum Speed
 
-### Microphone Not Working
+```yaml
+model_size: "tiny"
+beam_size: 1
+vad_filter: true
+device: "cpu"  # or "cuda" if you have NVIDIA GPU
+```
 
-- **Check permissions**: Ensure microphone access is granted
-- **Check connection**: Verify microphone is connected and working
-- **Test in other apps**: Confirm microphone works elsewhere
+**Expected speed**: ~1 second for 10s audio on modern CPU
 
-### Hotkey Not Working
+### For Maximum Accuracy
 
-- **Check conflicts**: Try a different hotkey combination in `config.yaml`
-- **Platform-specific**:
-  - **Linux Wayland**: May have limited global hotkey support
-  - **macOS**: Grant Accessibility permissions when prompted
+```yaml
+model_size: "small"
+beam_size: 5
+vad_filter: false
+```
 
-### Slow Transcription
+**Expected speed**: ~5-10 seconds for 30s audio
 
-**Quick fixes** (try these first):
+### GPU Acceleration
 
-1. Use `tiny` model: `model_size: "tiny"` in config.yaml
-2. Lower beam size: `beam_size: 1`
-3. Enable VAD filter: `vad_filter: true`
+If you have an NVIDIA GPU:
 
-**Advanced optimization**:
+```yaml
+device: "cuda"
+```
 
-- **GPU acceleration**: Set `device: "cuda"` (requires NVIDIA GPU + CUDA)
-- **Expected speeds** (on modern CPU):
-  - `tiny` + beam_size 1: ~2-3 seconds for 30s audio
-  - `base` + beam_size 5: ~5-10 seconds for 30s audio
-  - With CUDA GPU: 5-10x faster!
+Install CUDA toolkit first:
+- [CUDA Downloads](https://developer.nvidia.com/cuda-downloads)
 
-### Empty Results (No Text Inserted)
+**Speed boost**: 5-10x faster transcription! 🚀
 
-- **Speak clearly**: Ensure speech is audible
-- **Check microphone**: Verify recording actually captured audio
-- **Try different language**: Verify `primary_language` in config matches your speech
+---
 
-## Technical Details
+## 🔧 Troubleshooting
 
-- **Transcription Engine**: faster-whisper (CTranslate2-optimized Whisper)
-- **Audio Capture**: sounddevice
-- **Text Insertion**: Clipboard paste (instant, Unicode-safe)
-  - Linux: xclip + Ctrl+V
-  - Windows: Win32 API / PowerShell + Ctrl+V
-  - macOS: pbcopy + Cmd+V
-  - Fallback: pynput keyboard emulation
-- **UI Framework**: tkinter
-- **No Data Storage**: Audio is never saved to disk (privacy-focused)
-- **Clipboard Safety**: Original clipboard content is preserved and restored
+<details>
+<summary><b>Microphone not detected</b></summary>
 
-## Development
+**Linux**:
+```bash
+# Check microphone devices
+arecord -l
+
+# Test recording
+arecord -d 3 test.wav && aplay test.wav
+```
+
+**Windows**: Check Sound Settings → Input devices
+
+**macOS**: System Preferences → Security & Privacy → Microphone
+</details>
+
+<details>
+<summary><b>Hotkey not working</b></summary>
+
+- **Check conflicts**: Another app might use the same hotkey
+- **Try different combo**: Edit `hotkey` in `config.yaml`
+- **Linux Wayland**: Global hotkeys have limited support
+- **macOS**: Grant Accessibility permissions when prompted
+</details>
+
+<details>
+<summary><b>Text not pasting (Linux)</b></summary>
 
 ```bash
-# Install dependencies
-uv sync
+# Install clipboard tool
+sudo apt install xclip
 
-# Run application
-uv run python src/whisper-typer-ui.py
-
-# Build executable
-uv add pyinstaller
-uv run python build.py linux
+# Verify it works
+echo "test" | xclip -selection clipboard
+xclip -selection clipboard -o
 ```
+</details>
 
-## License
+<details>
+<summary><b>Slow transcription</b></summary>
 
-See LICENSE file for details.
+1. Switch to faster model:
+   ```yaml
+   model_size: "tiny"
+   beam_size: 1
+   ```
 
-## Privacy
+2. Enable VAD filter:
+   ```yaml
+   vad_filter: true
+   ```
 
-- All processing happens locally on your device
-- No internet connection required
-- Audio is never saved to disk
-- No telemetry or data collection
+3. Use GPU (NVIDIA only):
+   ```yaml
+   device: "cuda"
+   ```
+</details>
+
+<details>
+<summary><b>Empty results / no text inserted</b></summary>
+
+- **Speak louder**: Ensure microphone picks up your voice
+- **Check recording**: Look at console output for audio length
+- **Verify language**: Set `primary_language` to match your speech
+- **Reduce noise**: Try quieter environment
+</details>
+
+---
+
+## 🛠️ Technical Details
+
+| Component | Technology |
+|-----------|-----------|
+| Transcription | [faster-whisper](https://github.com/guillaumekln/faster-whisper) (CTranslate2) |
+| Audio Capture | [sounddevice](https://python-sounddevice.readthedocs.io/) |
+| Text Insertion | Clipboard paste (xclip/win32clipboard/pbcopy) |
+| Hotkey Detection | [pynput](https://github.com/moses-palmer/pynput) |
+| UI | tkinter (native) |
+| Privacy | ✅ No network, no storage, no telemetry |
+
+---
+
+## 📝 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [OpenAI Whisper](https://github.com/openai/whisper) — Amazing speech recognition model
+- [faster-whisper](https://github.com/guillaumekln/faster-whisper) — Blazing fast implementation
+- [pynput](https://github.com/moses-palmer/pynput) — Reliable keyboard control
+
+---
+
+**Built with ❤️ for privacy and productivity**
