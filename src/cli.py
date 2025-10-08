@@ -8,7 +8,7 @@ import sys
 import time
 from importlib.metadata import version, PackageNotFoundError
 
-from src import process_lock, daemon, service_manager
+from src import process_lock, daemon, service_manager, config_manager
 
 
 def get_version() -> str:
@@ -202,6 +202,32 @@ def cmd_disable() -> None:
         sys.exit(1)
 
 
+def cmd_config(args: argparse.Namespace) -> None:
+    """Handle config subcommands."""
+    if args.config_action == "edit":
+        config_manager.open_config_in_editor()
+    elif args.config_action == "show":
+        config_manager.show_config()
+    elif args.config_action == "path":
+        config_path = config_manager.ensure_config_exists()
+        print(config_path)
+    elif args.config_action == "reset":
+        config_manager.reset_config()
+    elif args.config_action == "validate":
+        is_valid = config_manager.validate_config()
+        sys.exit(0 if is_valid else 1)
+    else:
+        # Default: show path and basic help
+        config_path = config_manager.ensure_config_exists()
+        print(f"Configuration file: {config_path}\n")
+        print("Available commands:")
+        print("  whisper-typer config edit     - Edit configuration in your default editor")
+        print("  whisper-typer config show     - Display current configuration")
+        print("  whisper-typer config path     - Show configuration file path")
+        print("  whisper-typer config reset    - Reset to default configuration")
+        print("  whisper-typer config validate - Validate configuration file")
+
+
 def main() -> None:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -248,6 +274,18 @@ def main() -> None:
         help="Disable auto-start on system boot"
     )
     
+    # config command
+    config_parser = subparsers.add_parser(
+        "config",
+        help="Manage configuration file"
+    )
+    config_parser.add_argument(
+        "config_action",
+        nargs="?",
+        choices=["edit", "show", "path", "reset", "validate"],
+        help="Configuration action (edit/show/path/reset/validate)"
+    )
+    
     # daemon command (hidden - used by service managers)
     subparsers.add_parser(
         "daemon",
@@ -271,6 +309,8 @@ def main() -> None:
         cmd_enable()
     elif args.command == "disable":
         cmd_disable()
+    elif args.command == "config":
+        cmd_config(args)
     elif args.command == "daemon":
         cmd_daemon()
 

@@ -34,15 +34,19 @@ class AppConfig:
     VALID_COMPUTE_TYPES = ["int8", "float16", "float32"]
     VALID_DEVICES = ["cpu", "cuda"]
     
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str = None):
         """Load configuration from YAML file.
         
         Args:
-            config_path: Path to config.yaml file
+            config_path: Path to config.yaml file. If None, uses ~/.whisper-typer/config.yaml
             
         Raises:
             ConfigError: If YAML is invalid or required keys are malformed
         """
+        if config_path is None:
+            # Use user config directory
+            config_path = Path.home() / ".whisper-typer" / "config.yaml"
+        
         self.config_path = Path(config_path)
         self._config: dict[str, Any] = {}
         self._load_config()

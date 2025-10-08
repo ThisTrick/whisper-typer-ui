@@ -44,12 +44,15 @@ whisper-typer enable
 
 **Available commands**:
 ```bash
-whisper-typer start    # Start background service
-whisper-typer stop     # Stop background service
-whisper-typer status   # Show service status (PID, uptime, auto-start)
-whisper-typer enable   # Enable auto-start on system boot
-whisper-typer disable  # Disable auto-start
-whisper-typer --version # Show version
+whisper-typer start         # Start background service
+whisper-typer stop          # Stop background service
+whisper-typer status        # Show service status (PID, uptime, auto-start)
+whisper-typer enable        # Enable auto-start on system boot
+whisper-typer disable       # Disable auto-start
+whisper-typer config        # Manage configuration
+whisper-typer config edit   # Edit configuration in default editor
+whisper-typer config show   # Display current configuration
+whisper-typer --version     # Show version
 ```
 
 **Benefits**:
@@ -58,6 +61,7 @@ whisper-typer --version # Show version
 - ✅ Auto-start on system boot (optional)
 - ✅ Easy upgrades with `uv tool upgrade whisper-typer-ui`
 
+**Configuration**: `~/.whisper-typer/config.yaml` (auto-created on first run)  
 **Logs location**: `~/.whisper-typer/logs/service-YYYY-MM-DD.log` (rotated daily)
 
 > **First run**: The application will download the Whisper model (~75MB for `tiny`, ~3GB for `large-v3`). This only happens once.
@@ -122,8 +126,16 @@ That's it! 🎉
 
 ## ⚙️ Configuration
 
-Edit `config.yaml` to customize settings:
+The configuration file is automatically created at `~/.whisper-typer/config.yaml` on first run.
 
+**Edit configuration**:
+```bash
+whisper-typer config edit    # Opens in your default editor
+# or manually edit:
+nano ~/.whisper-typer/config.yaml
+```
+
+**Configuration options**:
 ```yaml
 # Language (ISO 639-1 code: en, uk, de, fr, es, ja, zh, etc.)
 primary_language: "en"
