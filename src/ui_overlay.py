@@ -89,6 +89,9 @@ class UIOverlay:
         """Actually show the window (called in main thread)."""
         self.window.deiconify()
         self.window.lift()
+        # Update position after showing (window needs to be visible to get correct screen dimensions)
+        self._position_window()
+        self.window.update_idletasks()
     
     def hide(self) -> None:
         """Make window invisible."""
@@ -176,19 +179,33 @@ class UIOverlay:
             self._pulsation_job = None
         # Reset to default width
         self.canvas.itemconfig(self.circle_id, width=3)
+        # Reset pulsation direction
+        if hasattr(self, '_pulsation_direction'):
+            delattr(self, '_pulsation_direction')
     
     def _pulsate(self) -> None:
         """Pulsation animation step."""
         if not self.pulsating:
             return
         
-        # Toggle between width 3 and 6
+        # Smooth pulsation between width 2 and 5
         current_width = float(self.canvas.itemcget(self.circle_id, 'width'))
-        new_width = 6 if current_width == 3.0 else 3
+        
+        # Toggle between widths for smooth pulsation
+        if not hasattr(self, '_pulsation_direction'):
+            self._pulsation_direction = 1  # 1 = growing, -1 = shrinking
+        
+        # Increment/decrement width
+        if current_width >= 5:
+            self._pulsation_direction = -1
+        elif current_width <= 2:
+            self._pulsation_direction = 1
+        
+        new_width = current_width + (0.5 * self._pulsation_direction)
         self.canvas.itemconfig(self.circle_id, width=new_width)
         
-        # Schedule next pulsation (500ms = 2 Hz)
-        self._pulsation_job = self.window.after(500, self._pulsate)
+        # Schedule next pulsation (100ms = 10 FPS for smoother animation)
+        self._pulsation_job = self.window.after(100, self._pulsate)
     
     def show_error(self, message: str, duration: float = 2.5) -> None:
         """Display error briefly.
@@ -203,6 +220,14 @@ class UIOverlay:
         
         # Auto-dismiss after duration
         self.window.after(int(duration * 1000), self.hide)
+    
+    def set_border_color(self, color: str) -> None:
+        """Set the border color.
+        
+        Args:
+            color: Color name (e.g., 'red', 'blue', 'green')
+        """
+        self.window.after(0, lambda: self.canvas.itemconfig(self.circle_id, outline=color))
     
     def set_click_callback(self, callback: Callable[[], None]) -> None:
         """Set callback for click events.

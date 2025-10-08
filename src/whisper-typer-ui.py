@@ -109,6 +109,7 @@ class WhisperTyperApp:
             
             # Show UI with microphone icon and pulsation
             self.ui.show()
+            self.ui.set_border_color('red')
             self.ui.set_icon(IconType.MICROPHONE)
             self.ui.start_pulsation()
             
@@ -135,8 +136,9 @@ class WhisperTyperApp:
         audio_length = len(self.audio_buffer) / self.recorder.sample_rate
         print(f"Recorded {audio_length:.2f} seconds of audio")
         
-        # Change UI to processing icon
+        # Change UI to processing icon (without pulsation - static border)
         self.ui.set_icon(IconType.PROCESSING)
+        self.ui.set_border_color('blue')  # Different color for processing
         
         # Process transcription in worker thread
         transcription_thread = threading.Thread(
