@@ -26,7 +26,8 @@ class AppConfig:
         "compute_type": "int8",
         "device": "cpu",
         "beam_size": 5,
-        "vad_filter": True
+        "vad_filter": True,
+        "chunk_duration": 30
     }
     
     VALID_MODEL_SIZES = ["tiny", "base", "small", "medium", "large-v3"]
@@ -100,6 +101,11 @@ class AppConfig:
         """Whether to use VAD filter to skip silence."""
         return self._config["vad_filter"]
     
+    @property
+    def chunk_duration(self) -> int:
+        """Duration of each audio chunk in seconds for streaming transcription."""
+        return self._config["chunk_duration"]
+    
     def validate(self) -> None:
         """Validate configuration values.
         
@@ -143,3 +149,11 @@ class AppConfig:
         vad = self.vad_filter
         if not isinstance(vad, bool):
             raise ConfigError("vad_filter", f"vad_filter must be boolean, got: {type(vad)}")
+        
+        # Validate chunk_duration
+        chunk_dur = self.chunk_duration
+        if not isinstance(chunk_dur, int) or chunk_dur <= 0:
+            print(f"WARNING: Invalid chunk_duration {chunk_dur}, using default 30")
+            self._config["chunk_duration"] = 30
+        else:
+            print(f"Using chunk_duration: {chunk_dur}s")

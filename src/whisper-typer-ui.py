@@ -3,6 +3,7 @@
 
 import sys
 import threading
+import time
 from pathlib import Path
 
 # Add src directory to path for imports
@@ -15,6 +16,7 @@ from ui_overlay import UIOverlay, IconType
 from utils import SessionState, MicrophoneError, TranscriptionError, ModelLoadError
 from transcriber import Transcriber
 from text_inserter import TextInserter
+from streaming_session import StreamingSession
 
 
 class WhisperTyperApp:
@@ -38,6 +40,12 @@ class WhisperTyperApp:
         # Initialize components
         self.session_state = SessionState.IDLE
         self.audio_buffer = None
+        
+        # Streaming session management
+        self.streaming_session: StreamingSession | None = None
+        self.is_processing = False  # Flag to prevent overlapping sessions
+        self._pending_insertions = 0  # Track pending text insertions
+        self._insertion_lock = threading.Lock()
         
         # Initialize UI in main thread (tkinter requirement)
         self.ui = UIOverlay()
@@ -84,12 +92,12 @@ class WhisperTyperApp:
     
     def on_hotkey_press(self) -> None:
         """Handle hotkey press event."""
-        if self.session_state == SessionState.IDLE:
-            # Start recording
-            self.start_recording()
+        if self.session_state == SessionState.IDLE and not self.is_processing:
+            # Start recording with streaming transcription
+            self.start_streaming_recording()
         elif self.session_state == SessionState.RECORDING:
-            # Stop recording
-            self.stop_recording()
+            # Stop recording and finalize streaming transcription
+            self.stop_streaming_recording()
         elif self.session_state == SessionState.TRANSCRIBING:
             # Ignore - transcription in progress
             return
@@ -98,7 +106,196 @@ class WhisperTyperApp:
         """Handle UI click event."""
         if self.session_state == SessionState.RECORDING:
             # Click to stop recording
-            self.stop_recording()
+            self.stop_streaming_recording()
+    
+    def start_streaming_recording(self) -> None:
+        """Start streaming recording session with parallel transcription."""
+        try:
+            print("\n[STREAMING RECORDING STARTED]")
+            self.session_state = SessionState.RECORDING
+            self.is_processing = True
+            
+            # Initialize streaming session with thread-safe text insertion wrapper
+            self.streaming_session = StreamingSession(
+                transcribe_fn=self.transcriber.transcribe_chunk,
+                insert_text_fn=self.insert_text_safe,  # Use thread-safe wrapper
+                on_error=self.on_streaming_error
+            )
+            
+            # Start audio recording
+            self.recorder.start_recording()
+            
+            # Show UI with microphone icon and pulsation
+            self.ui.show()
+            self.ui.set_border_color('#ff4444')  # Bright red
+            self.ui.set_icon(IconType.MICROPHONE)
+            self.ui.start_pulsation()
+            
+            print(f"Recording... (Press {self.config.hotkey_combo} or click to stop)")
+            print(f"Chunks will be transcribed every {self.config.chunk_duration} seconds")
+            
+            # Start chunk extraction loop in background thread
+            chunk_thread = threading.Thread(
+                target=self.chunk_extraction_loop,
+                daemon=True
+            )
+            chunk_thread.start()
+            
+        except MicrophoneError as e:
+            print(f"Error starting recording: {e}")
+            self.ui.show_error(f"Microphone error: {e.error_code}", duration=2.5)
+            self.session_state = SessionState.ERROR
+            self.is_processing = False
+    
+    def chunk_extraction_loop(self) -> None:
+        """Continuously extract and submit chunks during recording."""
+        try:
+            while self.session_state == SessionState.RECORDING:
+                # Wait for chunk duration
+                time.sleep(self.config.chunk_duration)
+                
+                # Check if still recording
+                if self.session_state != SessionState.RECORDING:
+                    break
+                
+                # Extract chunk from recorder
+                chunk = self.recorder.extract_chunk()
+                
+                print(f"[CHUNK {chunk.sequence}] Extracted {len(chunk.data) / self.recorder.sample_rate:.2f}s audio, submitting for transcription")
+                
+                # Submit to streaming session
+                if self.streaming_session:
+                    self.streaming_session.submit_chunk(chunk)
+                    
+        except Exception as e:
+            print(f"Error in chunk extraction loop: {e}")
+            self.on_streaming_error(e)
+    
+    def insert_text_safe(self, text: str) -> None:
+        """Thread-safe wrapper for text insertion.
+        
+        Schedules text insertion in main thread via tkinter.
+        This is required because text_inserter uses clipboard/keyboard
+        which may not be thread-safe when called from worker threads.
+        
+        Args:
+            text: Text to insert
+        """
+        # Increment pending insertions counter
+        with self._insertion_lock:
+            self._pending_insertions += 1
+        
+        # Schedule insertion in main thread
+        def do_insert():
+            try:
+                self.text_inserter.type_text(text)
+            finally:
+                # Decrement counter when done
+                with self._insertion_lock:
+                    self._pending_insertions -= 1
+        
+        self.ui.window.after(0, do_insert)
+    
+    def stop_streaming_recording(self) -> None:
+        """Stop streaming recording and finalize transcription."""
+        print("[STREAMING RECORDING STOPPED]")
+        
+        # Change state immediately to stop chunk extraction loop
+        self.session_state = SessionState.TRANSCRIBING
+        
+        # Extract final chunk BEFORE stopping the stream
+        # (stop_recording clears the buffer, so we need to extract first)
+        final_chunk = self.recorder.extract_chunk()
+        
+        # Now stop audio recording (closes stream and clears buffer)
+        self.recorder.stop_recording()
+        
+        # Stop pulsation, start rotation
+        self.ui.stop_pulsation()
+        self.ui.set_icon(IconType.PROCESSING)
+        self.ui.set_border_color('#4488ff')  # Bright blue
+        self.ui.start_rotation()
+        
+        print(f"[FINAL CHUNK {final_chunk.sequence}] Extracted {len(final_chunk.data) / self.recorder.sample_rate:.2f}s audio")
+        
+        # Submit final chunk if it has audio
+        if self.streaming_session and len(final_chunk.data) > 0:
+            self.streaming_session.submit_chunk(final_chunk)
+        
+        # Finalize in background thread
+        finalize_thread = threading.Thread(
+            target=self.finalize_streaming_session,
+            daemon=True
+        )
+        finalize_thread.start()
+    
+    def finalize_streaming_session(self) -> None:
+        """Wait for all chunks to complete and insert remaining text."""
+        try:
+            print("[FINALIZING STREAMING SESSION]")
+            
+            if self.streaming_session:
+                # This blocks until all chunks complete
+                self.streaming_session.finalize_and_insert()
+                self.streaming_session = None
+            
+            # Wait for all pending text insertions to complete
+            print("[FINALIZE] Waiting for pending text insertions...")
+            max_wait = 50  # Wait up to 5 seconds (50 * 100ms)
+            wait_count = 0
+            while wait_count < max_wait:
+                with self._insertion_lock:
+                    if self._pending_insertions == 0:
+                        break
+                    pending = self._pending_insertions
+                print(f"[FINALIZE] {pending} insertions pending, waiting...")
+                time.sleep(0.1)
+                wait_count += 1
+            
+            with self._insertion_lock:
+                if self._pending_insertions > 0:
+                    print(f"[FINALIZE] WARNING: {self._pending_insertions} insertions still pending after timeout")
+                else:
+                    print("[FINALIZE] All text insertions completed")
+            
+            print("[STREAMING SESSION COMPLETED]")
+            
+            # Schedule UI hide after short delay
+            self.ui.window.after(300, self.ui.hide)
+            
+        except Exception as e:
+            print(f"Error finalizing streaming session: {e}")
+            self.ui.show_error("Finalization failed", duration=2.5)
+        finally:
+            # Stop rotation
+            self.ui.stop_rotation()
+            # Reset state
+            self.session_state = SessionState.IDLE
+            self.is_processing = False
+            print("Ready for next recording\n")
+    
+    def on_streaming_error(self, error: Exception) -> None:
+        """Handle errors during streaming transcription."""
+        print(f"Streaming error: {error}")
+        
+        # Stop UI animations
+        self.ui.stop_rotation()
+        self.ui.stop_pulsation()
+        
+        # Show error to user
+        self.ui.show_error("Transcription failed", duration=2.5)
+        
+        # Clean up session
+        self.streaming_session = None
+        self.session_state = SessionState.ERROR
+        self.is_processing = False
+        
+        # Schedule state reset
+        def reset_to_idle():
+            self.session_state = SessionState.IDLE
+            print("Ready for next recording\n")
+        
+        self.ui.window.after(2500, reset_to_idle)
     
     def start_recording(self) -> None:
         """Start recording session."""
