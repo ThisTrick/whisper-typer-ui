@@ -23,11 +23,15 @@ class AppConfig:
         "primary_language": "en",
         "hotkey": "<ctrl>+<alt>+<space>",
         "model_size": "base",
-        "compute_type": "int8"
+        "compute_type": "int8",
+        "device": "cpu",
+        "beam_size": 5,
+        "vad_filter": True
     }
     
     VALID_MODEL_SIZES = ["tiny", "base", "small", "medium", "large-v3"]
     VALID_COMPUTE_TYPES = ["int8", "float16", "float32"]
+    VALID_DEVICES = ["cpu", "cuda"]
     
     def __init__(self, config_path: str = "config.yaml"):
         """Load configuration from YAML file.
@@ -81,6 +85,21 @@ class AppConfig:
         """CTranslate2 compute type (int8, float16, float32)."""
         return self._config["compute_type"]
     
+    @property
+    def device(self) -> str:
+        """Device for model inference (cpu or cuda)."""
+        return self._config["device"]
+    
+    @property
+    def beam_size(self) -> int:
+        """Beam size for transcription (lower = faster)."""
+        return self._config["beam_size"]
+    
+    @property
+    def vad_filter(self) -> bool:
+        """Whether to use VAD filter to skip silence."""
+        return self._config["vad_filter"]
+    
     def validate(self) -> None:
         """Validate configuration values.
         
@@ -108,3 +127,19 @@ class AppConfig:
         if compute not in self.VALID_COMPUTE_TYPES:
             raise ConfigError("compute_type",
                 f"Invalid compute type '{compute}'. Valid options: {', '.join(self.VALID_COMPUTE_TYPES)}")
+        
+        # Validate device
+        device = self.device
+        if device not in self.VALID_DEVICES:
+            raise ConfigError("device",
+                f"Invalid device '{device}'. Valid options: {', '.join(self.VALID_DEVICES)}")
+        
+        # Validate beam_size
+        beam = self.beam_size
+        if not isinstance(beam, int) or beam < 1:
+            raise ConfigError("beam_size", f"beam_size must be a positive integer, got: {beam}")
+        
+        # Validate vad_filter
+        vad = self.vad_filter
+        if not isinstance(vad, bool):
+            raise ConfigError("vad_filter", f"vad_filter must be boolean, got: {type(vad)}")

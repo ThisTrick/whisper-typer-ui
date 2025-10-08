@@ -54,9 +54,11 @@ class WhisperTyperApp:
         try:
             self.transcriber = Transcriber(
                 model_size=self.config.model_size,
-                device="cpu",
+                device=self.config.device,
                 compute_type=self.config.compute_type,
-                language=self.config.primary_language
+                language=self.config.primary_language,
+                beam_size=self.config.beam_size,
+                vad_filter=self.config.vad_filter
             )
         except ModelLoadError as e:
             print(f"Model loading error: {e}")

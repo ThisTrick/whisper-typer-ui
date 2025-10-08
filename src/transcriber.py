@@ -16,7 +16,9 @@ class Transcriber:
         model_size: str = "base",
         device: str = "cpu",
         compute_type: str = "int8",
-        language: str = "en"
+        language: str = "en",
+        beam_size: int = 5,
+        vad_filter: bool = True
     ):
         """Initialize transcriber and load model.
         
@@ -25,6 +27,8 @@ class Transcriber:
             device: "cpu" or "cuda"
             compute_type: "int8" | "float16" | "float32"
             language: ISO 639-1 primary language code
+            beam_size: Beam size for transcription (lower = faster)
+            vad_filter: Whether to use VAD filter to skip silence
             
         Raises:
             ModelLoadError: If model download/loading fails
@@ -33,6 +37,8 @@ class Transcriber:
         self.device = device
         self.compute_type = compute_type
         self.language = language
+        self.beam_size = beam_size
+        self.vad_filter = vad_filter
         
         # Load model
         try:
@@ -68,7 +74,8 @@ class Transcriber:
             segments, info = self.model.transcribe(
                 audio_buffer,
                 language=self.language,
-                beam_size=5
+                beam_size=self.beam_size,
+                vad_filter=self.vad_filter
             )
             
             # Force completion and collect text

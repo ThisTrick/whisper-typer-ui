@@ -54,25 +54,33 @@ Edit `config.yaml` to customize:
 primary_language: "en"
 
 # Global hotkey combination (pynput format)
-hotkey: "<ctrl>+<alt>+space"
+hotkey: "<ctrl>+<alt>+<space>"
 
-# Model size: tiny, base, small, medium, large-v3
-# Larger models = better accuracy but slower
-model_size: "base"
+# Model configuration
+model_size: "tiny"  # tiny, base, small, medium, large-v3
+compute_type: "int8"  # int8, float16, float32
+device: "cpu"  # cpu or cuda (NVIDIA GPU)
 
-# Compute type: int8, float16, float32
-# int8 recommended for CPU
-compute_type: "int8"
+# Performance tuning
+beam_size: 1  # Lower = faster, higher = more accurate (default: 5)
+vad_filter: true  # Skip silent parts (faster)
 ```
 
 **Supported Languages**: Any ISO 639-1 code (e.g., "en", "uk", "de", "fr", "es", "ja", "zh")
 
 **Model Sizes**:
-- `tiny` (39MB): Fastest, lower accuracy
-- `base` (74MB): **Recommended** - good balance
-- `small` (244MB): Better accuracy
+
+- `tiny` (39MB): **Fastest** - great for real-time dictation
+- `base` (74MB): Good balance of speed and accuracy
+- `small` (244MB): Better accuracy, slower
 - `medium` (769MB): High accuracy
-- `large-v3` (~3GB): Best accuracy, slowest
+- `large-v3` (~3GB): Best accuracy, very slow
+
+**Performance Optimization**:
+
+- **For speed**: `tiny` model + `beam_size: 1` + `vad_filter: true`
+- **For accuracy**: `base`/`small` model + `beam_size: 5`
+- **GPU boost**: Set `device: "cuda"` (requires NVIDIA GPU, 5-10x faster!)
 
 ## Troubleshooting
 
@@ -91,9 +99,19 @@ compute_type: "int8"
 
 ### Slow Transcription
 
-- **Use smaller model**: Try `tiny` or `base` in `config.yaml`
-- **Check CPU**: Transcription is CPU-intensive
-- **Expected speeds**: 5-10 seconds for 30 seconds of audio with `base` model
+**Quick fixes** (try these first):
+
+1. Use `tiny` model: `model_size: "tiny"` in config.yaml
+2. Lower beam size: `beam_size: 1`
+3. Enable VAD filter: `vad_filter: true`
+
+**Advanced optimization**:
+
+- **GPU acceleration**: Set `device: "cuda"` (requires NVIDIA GPU + CUDA)
+- **Expected speeds** (on modern CPU):
+  - `tiny` + beam_size 1: ~2-3 seconds for 30s audio
+  - `base` + beam_size 5: ~5-10 seconds for 30s audio
+  - With CUDA GPU: 5-10x faster!
 
 ### Empty Results (No Text Inserted)
 
