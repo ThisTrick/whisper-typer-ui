@@ -163,12 +163,17 @@ class WhisperTyperApp:
                 print("[TEXT INSERTION STARTED]")
                 self.session_state = SessionState.INSERTING
                 self.text_inserter.type_text(result.text)
+                print("[TEXT INSERTION COMPLETED]")
                 self.session_state = SessionState.COMPLETED
             else:
                 print("Empty transcription - no text to insert")
                 self.session_state = SessionState.COMPLETED
             
-            # Hide UI
+            # Small delay before hiding to ensure text is fully typed
+            import time
+            time.sleep(0.3)
+            
+            # Hide UI after text insertion is complete
             self.ui.hide()
             
         except TranscriptionError as e:

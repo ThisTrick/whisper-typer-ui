@@ -28,8 +28,9 @@ class UIOverlay:
         
         # Configure window properties
         self.window.attributes('-topmost', True)  # Always on top
-        self.window.attributes('-alpha', 0.9)     # Semi-transparent
+        self.window.attributes('-alpha', 1.0)     # Fully opaque
         self.window.overrideredirect(True)        # No window decorations
+        self.window.attributes('-transparentcolor', '#1a1a1a')  # Make background transparent
         
         # Position in bottom-right corner
         self._position_window()
