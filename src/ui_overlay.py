@@ -28,28 +28,36 @@ class UIOverlay:
         
         # Configure window properties
         self.window.attributes('-topmost', True)  # Always on top
-        self.window.attributes('-alpha', 1.0)     # Fully opaque
         self.window.overrideredirect(True)        # No window decorations
-        self.window.attributes('-transparentcolor', '#1a1a1a')  # Make background transparent
+        
+        # Try to make background transparent (platform-specific)
+        try:
+            # Windows
+            self.window.attributes('-transparentcolor', '#1a1a1a')
+            self.window.attributes('-alpha', 1.0)
+        except:
+            # Linux/Mac - use alpha for semi-transparency
+            self.window.attributes('-alpha', 0.95)
         
         # Position in bottom-right corner
         self._position_window()
         
-        # Create canvas for drawing
+        # Create canvas for drawing - minimal size
+        canvas_size = size - 40  # Smaller canvas, just for the circle
         self.canvas = tk.Canvas(
             self.window,
-            width=size,
-            height=size,
+            width=canvas_size,
+            height=canvas_size,
             highlightthickness=0,
-            bg='#1a1a1a'  # Dark gray background instead of gray15
+            bg='#1a1a1a'  # Dark gray background
         )
-        self.canvas.pack()
+        self.canvas.place(x=20, y=20)  # Center the canvas
         
         # Draw circle background (filled)
-        padding = 30
+        padding = 10
         self.bg_circle_id = self.canvas.create_oval(
             padding, padding,
-            size - padding, size - padding,
+            canvas_size - padding, canvas_size - padding,
             fill='#2d2d2d',  # Slightly lighter gray for circle background
             outline=''
         )
@@ -57,7 +65,7 @@ class UIOverlay:
         # Draw circle outline
         self.circle_id = self.canvas.create_oval(
             padding, padding,
-            size - padding, size - padding,
+            canvas_size - padding, canvas_size - padding,
             outline='#ff4444',  # Brighter red
             width=9
         )
