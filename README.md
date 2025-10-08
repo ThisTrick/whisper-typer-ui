@@ -44,15 +44,18 @@ whisper-typer enable
 
 **Available commands**:
 ```bash
-whisper-typer start         # Start background service
-whisper-typer stop          # Stop background service
-whisper-typer status        # Show service status (PID, uptime, auto-start)
-whisper-typer enable        # Enable auto-start on system boot
-whisper-typer disable       # Disable auto-start
-whisper-typer config        # Manage configuration
-whisper-typer config edit   # Edit configuration in default editor
-whisper-typer config show   # Display current configuration
-whisper-typer --version     # Show version
+whisper-typer start            # Start background service
+whisper-typer stop             # Stop background service
+whisper-typer status           # Show service status (PID, uptime, auto-start)
+whisper-typer enable           # Enable auto-start on system boot
+whisper-typer disable          # Disable auto-start
+whisper-typer config           # Show config location and available commands
+whisper-typer config edit      # Edit configuration in default editor
+whisper-typer config show      # Display current configuration
+whisper-typer config path      # Show configuration file path
+whisper-typer config reset     # Reset configuration to defaults
+whisper-typer config validate  # Validate configuration file
+whisper-typer --version        # Show version
 ```
 
 **Benefits**:
