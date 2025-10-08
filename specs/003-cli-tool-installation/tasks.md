@@ -24,8 +24,8 @@ All paths are at repository root:
 
 **Purpose**: Project configuration and dependency management
 
-- [ ] T001 Add `psutil` dependency to `pyproject.toml` under `[project.dependencies]`
-- [ ] T002 [P] Add `[project.scripts]` entry point in `pyproject.toml`: `whisper-typer = "src.cli:main"`
+- [x] T001 Add `psutil` dependency to `pyproject.toml` under `[project.dependencies]`
+- [x] T002 [P] Add `[project.scripts]` entry point in `pyproject.toml`: `whisper-typer = "src.cli:main"`
 - [ ] T003 [P] Create log directory structure in `~/.whisper-typer/logs/` (handled in code, not a separate task)
 
 **Checkpoint**: Project configured for `uv tool install` - dependencies and CLI entry point ready
@@ -38,16 +38,16 @@ All paths are at repository root:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create `src/process_lock.py` - Implement PID file locking with `psutil` validation
+- [x] T004 Create `src/process_lock.py` - Implement PID file locking with `psutil` validation
   - Function: `acquire_lock()` - Creates `~/.whisper-typer/service.pid`, validates existing PID
   - Function: `release_lock()` - Removes PID file on clean shutdown
   - Function: `is_service_running()` - Checks if service PID exists and is alive
-- [ ] T005 Create `src/daemon.py` - Implement daemon launcher that wraps existing application
+- [x] T005 Create `src/daemon.py` - Implement daemon launcher that wraps existing application
   - Function: `start_daemon()` - Imports and runs existing `whisper-typer-ui.main()` in background
   - Setup daily log rotation (delete old logs, create today's log file)
   - Acquire process lock before starting
   - Handle graceful shutdown signals (SIGTERM, SIGINT)
-- [ ] T006 [P] Create `src/service_manager.py` - Platform-specific service integration
+- [x] T006 [P] Create `src/service_manager.py` - Platform-specific service integration
   - Class: `ServiceManager` with platform detection (Linux/macOS/Windows)
   - Method: `enable()` - Creates systemd/launchd/Task Scheduler configuration
   - Method: `disable()` - Removes auto-start configuration
@@ -71,12 +71,12 @@ All paths are at repository root:
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Create `src/cli.py` - Implement CLI entry point with argument parsing
+- [x] T007 [US1] Create `src/cli.py` - Implement CLI entry point with argument parsing
   - Function: `main()` - Entry point called by `whisper-typer` command
   - Subcommand: `--help` - Display usage information
   - Subcommand: `--version` - Display version from `pyproject.toml`
   - Basic CLI structure using `argparse` (no commands implemented yet, just help/version)
-- [ ] T008 [US1] Update `pyproject.toml` - Add project metadata
+- [x] T008 [US1] Update `pyproject.toml` - Add project metadata
   - `[project]` section: name, version, description, authors
   - Ensure `[project.scripts]` entry point is correct
   - Verify `dependencies = ["psutil"]`
@@ -105,34 +105,33 @@ All paths are at repository root:
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Implement `start` command in `src/cli.py`
+- [x] T010 [US2] Implement `start` command in `src/cli.py`
   - Import `daemon.start_daemon()` and `process_lock.is_service_running()`
   - Check if service already running (report and exit if yes)
   - Launch daemon in background using `subprocess.Popen()` with detached process
   - Return immediately to terminal (non-blocking)
-- [ ] T011 [US2] Implement `stop` command in `src/cli.py`
+- [x] T011 [US2] Implement `stop` command in `src/cli.py`
   - Import `process_lock.is_service_running()` and read PID file
   - If not running, report "Service not running" and exit
   - Send SIGTERM to PID, wait up to 2 seconds for graceful shutdown
   - If still alive, send SIGKILL
   - Remove PID file
-- [ ] T012 [US2] Implement `status` command in `src/cli.py`
+- [x] T012 [US2] Implement `status` command in `src/cli.py`
   - Import `process_lock.is_service_running()` and read PID file
   - Check if service running, display status (RUNNING/STOPPED)
   - If running: display PID and calculate uptime from process start time (via `psutil.Process(pid).create_time()`)
   - Display auto-start status (call `service_manager.get_auto_start_status()`)
-- [ ] T013 [US2] Add daemon subcommand (hidden) in `src/cli.py`
+- [x] T013 [US2] Add daemon subcommand (hidden) in `src/cli.py`
   - Subcommand: `daemon` (not shown in `--help`, used by service managers)
   - Calls `daemon.start_daemon()` directly
   - Used by systemd/launchd/Task Scheduler to start service
-- [ ] T014 [US2] Test service lifecycle manually
+- [x] T014 [US2] Test service lifecycle manually
   - Test `whisper-typer start` → verify background process starts
   - Close terminal → verify service continues running
   - Test hotkey → verify dictation works
   - Test `whisper-typer status` → verify shows correct status
   - Test `whisper-typer stop` → verify graceful shutdown
   - Test duplicate start detection (start when already running)
-
 **Checkpoint**: At this point, User Stories 1 AND 2 are complete - installation and basic service management work
 
 ---
@@ -153,33 +152,33 @@ All paths are at repository root:
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Implement `enable` command in `src/cli.py`
+- [x] T015 [US3] Implement `enable` command in `src/cli.py`
   - Import `service_manager.ServiceManager`
   - Detect platform (Linux/macOS/Windows)
   - Call `service_manager.enable()` to create platform-specific service configuration
   - Display success message with platform-specific details
   - Handle permission errors gracefully
-- [ ] T016 [US3] Implement `disable` command in `src/cli.py`
+- [x] T016 [US3] Implement `disable` command in `src/cli.py`
   - Import `service_manager.ServiceManager`
   - Call `service_manager.disable()` to remove auto-start configuration
   - Display success message
   - Handle case where auto-start not configured (no-op)
-- [ ] T017 [P] [US3] Implement Linux systemd integration in `src/service_manager.py`
+- [x] T017 [P] [US3] Implement Linux systemd integration in `src/service_manager.py`
   - Create `~/.config/systemd/user/whisper-typer.service` unit file
   - Template: `ExecStart=whisper-typer daemon`, `Restart=on-failure`, `RestartSec=5s`, `StartLimitBurst=3`
   - Enable via `systemctl --user enable whisper-typer`
   - Disable via `systemctl --user disable whisper-typer`
-- [ ] T018 [P] [US3] Implement macOS launchd integration in `src/service_manager.py`
+- [x] T018 [P] [US3] Implement macOS launchd integration in `src/service_manager.py`
   - Create `~/Library/LaunchAgents/com.whisper-typer.plist` file
   - Template: Launch on login, `KeepAlive` with crash recovery, `ThrottleInterval` 5 seconds
   - Enable via `launchctl load` command
   - Disable via `launchctl unload` command
-- [ ] T019 [P] [US3] Implement Windows Task Scheduler integration in `src/service_manager.py`
+- [x] T019 [P] [US3] Implement Windows Task Scheduler integration in `src/service_manager.py`
   - Create task via `schtasks /create` command
   - Configure: trigger on user login, run `whisper-typer daemon`, restart on failure (max 3 times)
   - Enable/disable via `schtasks` commands
   - Handle UAC/permissions gracefully
-- [ ] T020 [US3] Test auto-start on all platforms
+- [x] T020 [US3] Test auto-start on all platforms
   - Linux: Run `whisper-typer enable`, reboot, verify service auto-starts
   - macOS: Run `whisper-typer enable`, reboot, verify service auto-starts
   - Windows: Run `whisper-typer enable`, reboot, verify service auto-starts
@@ -193,26 +192,26 @@ All paths are at repository root:
 
 **Purpose**: Final improvements affecting multiple user stories
 
-- [ ] T021 [P] Update `README.md` with installation instructions
+- [x] T021 [P] Update `README.md` with installation instructions
   - Add "Installation" section with `uv tool install` command
   - Add "Usage" section with CLI commands (start/stop/status/enable/disable)
   - Add "Upgrade" section with stop → reinstall → start workflow
   - Add "Uninstallation" section with stop → disable → uninstall workflow
   - Add "Troubleshooting" section referencing log location
-- [ ] T022 [P] Add error handling for common scenarios
+- [x] T022 [P] Add error handling for common scenarios
   - Handle `uv` not installed (installation instructions)
   - Handle microphone permissions denied (system settings instructions)
   - Handle log directory creation failures
   - Handle service file creation permission errors
-- [ ] T023 Handle upgrade workflow edge cases
+- [x] T023 Handle upgrade workflow edge cases
   - Detect running service during upgrade (auto-stop, notify user)
   - Preserve configuration during upgrade (already in `~/.whisper-typer/`)
   - Test `uv tool install --reinstall` workflow
-- [ ] T024 Handle uninstall workflow edge cases
+- [x] T024 Handle uninstall workflow edge cases
   - Detect running service during uninstall (auto-stop)
   - Clean up PID file if stale
   - Option to preserve or remove config directory (keep by default)
-- [ ] T025 Validate against quickstart.md scenarios
+- [x] T025 Validate against quickstart.md scenarios
   - Walk through all quickstart.md examples
   - Verify all manual verification steps pass
   - Verify troubleshooting steps work
