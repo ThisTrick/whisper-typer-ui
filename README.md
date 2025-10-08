@@ -26,8 +26,6 @@ Whisper Typer UI transforms your speech into text instantly using OpenAI's Whisp
 
 ## 📦 Installation
 
-### Option 1: CLI Tool (Recommended)
-
 Install globally as a command-line tool using `uv`:
 
 ```bash
@@ -40,15 +38,9 @@ whisper-typer start
 # Check status
 whisper-typer status
 
-# Enable auto-start on system boot
+# Enable auto-start on system boot (optional)
 whisper-typer enable
 ```
-
-**Benefits**:
-- ✅ Global `whisper-typer` command available everywhere
-- ✅ Background service - runs without terminal window
-- ✅ Auto-start on system boot (optional)
-- ✅ Easy upgrades with `uv tool upgrade whisper-typer-ui`
 
 **Available commands**:
 ```bash
@@ -60,68 +52,20 @@ whisper-typer disable  # Disable auto-start
 whisper-typer --version # Show version
 ```
 
+**Benefits**:
+- ✅ Global `whisper-typer` command available everywhere
+- ✅ Background service - runs without terminal window
+- ✅ Auto-start on system boot (optional)
+- ✅ Easy upgrades with `uv tool upgrade whisper-typer-ui`
+
 **Logs location**: `~/.whisper-typer/logs/service-YYYY-MM-DD.log` (rotated daily)
 
----
-
-### Option 2: Manual Development Setup
-
-For development or if you prefer running manually:
-
-#### Linux (Ubuntu/Debian)
-
-```bash
-# Install system dependencies
-sudo apt install xclip python3.11
-
-# Clone and install
-git clone https://github.com/ThisTrick/whisper-typer-ui.git
-cd whisper-typer-ui
-
-# Install with uv (recommended)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uv sync
-
-# Run
-uv run python src/whisper-typer-ui.py
-```
-
-#### Windows
-
-```powershell
-# Clone repository
-git clone https://github.com/ThisTrick/whisper-typer-ui.git
-cd whisper-typer-ui
-
-# Install with uv
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-uv sync
-
-# Run
-uv run python src/whisper-typer-ui.py
-```
-
-#### macOS
-
-```bash
-# Install Homebrew (if not installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Clone and install
-git clone https://github.com/ThisTrick/whisper-typer-ui.git
-cd whisper-typer-ui
-brew install python@3.11
-uv sync
-
-# Run
-uv run python src/whisper-typer-ui.py
-```
+> **First run**: The application will download the Whisper model (~75MB for `tiny`, ~3GB for `large-v3`). This only happens once.
 
 ---
 
 ### Upgrading
 
-**CLI tool installation**:
 ```bash
 # Stop service first (preserves config)
 whisper-typer stop
@@ -133,18 +77,10 @@ uv tool upgrade whisper-typer-ui
 whisper-typer start
 ```
 
-**Manual installation**:
-```bash
-cd whisper-typer-ui
-git pull
-uv sync
-```
-
 ---
 
 ### Uninstallation
 
-**CLI tool installation**:
 ```bash
 # Stop service and disable auto-start
 whisper-typer stop
@@ -157,30 +93,27 @@ uv tool uninstall whisper-typer-ui
 rm -rf ~/.whisper-typer
 ```
 
-**Manual installation**:
-```bash
-rm -rf whisper-typer-ui
-```
-
 ---
 
-##  Quick Start
+## 🚀 Quick Start
 
-1. **Launch the app**
+1. **Install** (see above)
+
+2. **Start the service**
    ```bash
-   uv run python src/whisper-typer-ui.py
+   whisper-typer start
    ```
 
-2. **Press the hotkey** (default: `Ctrl+Alt+Space`)
+3. **Press the hotkey** (default: `Ctrl+Alt+Space`)
    - A circular overlay appears
 
-3. **Speak your message**
+4. **Speak your message**
    - Red pulsing circle = recording
 
-4. **Release the hotkey**
+5. **Release the hotkey**
    - Blue rotating circle = transcribing
 
-5. **Text appears automatically**
+6. **Text appears automatically**
    - Pasted into your active application
 
 That's it! 🎉
