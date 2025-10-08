@@ -164,65 +164,7 @@ rm -rf whisper-typer-ui
 
 ---
 
-## 📦 Installation (Legacy)
-
-<details>
-<summary>Click to expand manual installation instructions (deprecated)</summary>
-
-### Linux (Ubuntu/Debian)
-
-```bash
-# Install system dependencies
-sudo apt install xclip python3.11
-
-# Clone and install
-git clone https://github.com/ThisTrick/whisper-typer-ui.git
-cd whisper-typer-ui
-
-# Install with uv (recommended)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uv sync
-
-# Run
-uv run python src/whisper-typer-ui.py
-```
-
-### Windows
-
-```powershell
-# Clone repository
-git clone https://github.com/ThisTrick/whisper-typer-ui.git
-cd whisper-typer-ui
-
-# Install with uv
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-uv sync
-
-# Run
-uv run python src/whisper-typer-ui.py
-```
-
-### macOS
-
-```bash
-# Install Homebrew (if not installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Clone and install
-git clone https://github.com/ThisTrick/whisper-typer-ui.git
-cd whisper-typer-ui
-brew install python@3.11
-uv sync
-
-# Run
-uv run python src/whisper-typer-ui.py
-```
-
-</details>
-
----
-
-## 🚀 Quick Start
+##  Quick Start
 
 1. **Launch the app**
    ```bash
