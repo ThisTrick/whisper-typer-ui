@@ -23,7 +23,7 @@ Tasks are organized by user story priority (P1 → P2 → P3) to enable incremen
 
 **Manual Verification**: Run `uv sync` successfully, application imports all modules without errors.
 
-### T001: Initialize Python project with uv [P]
+### T001: Initialize Python project with uv [P] ✓
 
 **File**: `pyproject.toml`, `.python-version`
 
@@ -52,7 +52,7 @@ build-backend = "hatchling.build"
 
 ---
 
-### T002: Create project directory structure [P]
+### T002: Create project directory structure [P] ✓
 
 **Files**: `src/`, `assets/`, `config.yaml`
 
@@ -72,7 +72,7 @@ config.yaml
 
 ---
 
-### T003: Create default configuration file [P]
+### T003: Create default configuration file [P] ✓
 
 **File**: `config.yaml`
 
@@ -91,7 +91,7 @@ compute_type: "int8"
 
 ---
 
-### T004: Implement configuration loader module
+### T004: Implement configuration loader module ✓
 
 **File**: `src/config.py`
 
@@ -121,7 +121,7 @@ class AppConfig:
 
 ---
 
-### T005: Create shared utilities and exceptions module
+### T005: Create shared utilities and exceptions module ✓
 
 **File**: `src/utils.py`
 
@@ -149,7 +149,7 @@ class ModelLoadError(Exception):
 
 ---
 
-### T006: Create UI icon assets [P]
+### T006: Create UI icon assets [P] ✓
 
 **Files**: `assets/microphone.png`, `assets/processing.png`
 
@@ -167,7 +167,7 @@ class ModelLoadError(Exception):
 
 **Manual Verification**: All modules import successfully, config loads without errors.
 
-### T007: Define core data models and enums
+### T007: Define core data models and enums ✓
 
 **File**: `src/utils.py` (add to existing)
 
@@ -218,7 +218,7 @@ class TranscriptionResult:
 
 ---
 
-### T008: [US1] Implement global hotkey manager
+### T008: [US1] Implement global hotkey manager ✓
 
 **File**: `src/hotkey_manager.py`
 
@@ -253,7 +253,7 @@ with keyboard.GlobalHotKeys({hotkey_combo: on_activate}) as h:
 
 ---
 
-### T009: [US1] Implement audio recorder module
+### T009: [US1] Implement audio recorder module ✓
 
 **File**: `src/audio_recorder.py`
 
@@ -292,7 +292,7 @@ audio_data = np.concatenate(recording, axis=0)
 
 ---
 
-### T010: [US1] Implement tkinter UI overlay - basic structure
+### T010: [US1] Implement tkinter UI overlay - basic structure ✓
 
 **File**: `src/ui_overlay.py`
 
@@ -336,7 +336,7 @@ circle = canvas.create_oval(10, 10, 70, 70, outline='red', width=3)
 
 ---
 
-### T011: [US1] Add icon display to UI overlay [P]
+### T011: [US1] Add icon display to UI overlay [P] ✓
 
 **File**: `src/ui_overlay.py` (extend existing)
 
@@ -358,7 +358,7 @@ def set_icon(self, icon_type: IconType):
 
 ---
 
-### T012: [US1] Add pulsating animation to UI overlay [P]
+### T012: [US1] Add pulsating animation to UI overlay [P] ✓
 
 **File**: `src/ui_overlay.py` (extend existing)
 
@@ -388,7 +388,7 @@ def stop_pulsation(self):
 
 ---
 
-### T013: [US1] Implement main application entry point - User Story 1 only
+### T013: [US1] Implement main application entry point - User Story 1 only ✓
 
 **File**: `src/whisper-typer-ui.py`
 
@@ -437,7 +437,7 @@ hotkey_mgr.start()
 
 ---
 
-### T014: [US1] Add click-to-stop functionality to UI overlay
+### T014: [US1] Add click-to-stop functionality to UI overlay ✓
 
 **File**: `src/ui_overlay.py` (extend existing)
 
@@ -502,7 +502,7 @@ ui.set_click_callback(on_ui_click)
 
 ---
 
-### T015: [US2] Implement faster-whisper transcriber module
+### T015: [US2] Implement faster-whisper transcriber module ✓
 
 **File**: `src/transcriber.py`
 
@@ -555,7 +555,7 @@ class Transcriber:
 
 ---
 
-### T016: [US2] Implement keyboard emulation text inserter module [P]
+### T016: [US2] Implement keyboard emulation text inserter module [P] ✓
 
 **File**: `src/text_inserter.py`
 
@@ -587,7 +587,7 @@ class TextInserter:
 
 ---
 
-### T017: [US2] Add transcription processing to main application
+### T017: [US2] Add transcription processing to main application ✓
 
 **File**: `src/whisper-typer-ui.py` (extend existing)
 
@@ -640,7 +640,7 @@ def on_hotkey_press():
 
 ---
 
-### T018: [US2] Implement audio buffer cleanup
+### T018: [US2] Implement audio buffer cleanup ✓
 
 **File**: `src/whisper-typer-ui.py` (extend existing)
 
@@ -694,7 +694,7 @@ def process_transcription(audio_buffer):
 
 ---
 
-### T019: [US3] Create PyInstaller build script [P]
+### T019: [US3] Create PyInstaller build script [P] ✓
 
 **File**: `build.py`
 
@@ -960,7 +960,7 @@ print("Model loaded. Press hotkey to activate.")
 
 ---
 
-### T028: Create end-user README documentation
+### T028: Create end-user README documentation ✓
 
 **File**: `README.md`
 
