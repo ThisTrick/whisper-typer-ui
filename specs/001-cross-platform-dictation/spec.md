@@ -105,7 +105,12 @@ User works on multiple operating systems (Windows, macOS, Linux) and expects the
 - **FR-009a**: System MUST use local/offline transcription engine (no internet connection required)
 - **FR-009b**: System MUST use faster-whisper as the transcription engine
 - **FR-010**: System MUST insert complete transcribed text into the previously focused text input field after transcription finishes
-- **FR-010a**: System MUST use keyboard emulation to simulate typing for text insertion
+- **FR-010a**: System MUST use clipboard paste method for text insertion (faster and more reliable than keyboard emulation, especially for Unicode)
+- **FR-010a-1**: On Linux, system MUST use xclip + Ctrl+V for clipboard paste
+- **FR-010a-2**: On Windows, system MUST use Win32 API or PowerShell + Ctrl+V for clipboard paste  
+- **FR-010a-3**: On macOS, system MUST use pbcopy + Cmd+V for clipboard paste
+- **FR-010a-4**: System MUST preserve original clipboard content by saving and restoring it after paste operation
+- **FR-010a-5**: System MUST fallback to pynput keyboard emulation if clipboard method fails
 - **FR-010b**: System MUST insert nothing and hide UI immediately if transcription result is empty (no error shown)
 - **FR-011**: System MUST position cursor at the end of inserted text after insertion completes
 - **FR-012**: System MUST hide UI overlay after text insertion completes

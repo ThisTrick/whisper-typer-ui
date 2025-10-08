@@ -70,13 +70,20 @@ class Transcriber:
         try:
             start_time = time.time()
             
+            print(f"Starting transcription of {audio_length:.2f}s audio...")
+            
             # Transcribe with language hint
+            # Note: This is the CPU-intensive blocking operation
             segments, info = self.model.transcribe(
                 audio_buffer,
                 language=self.language,
                 beam_size=self.beam_size,
-                vad_filter=self.vad_filter
+                vad_filter=self.vad_filter,
+                # These settings can help reduce CPU blocking:
+                without_timestamps=True,  # Faster processing
             )
+            
+            print(f"Transcription model finished, collecting segments...")
             
             # Force completion and collect text
             segments = list(segments)

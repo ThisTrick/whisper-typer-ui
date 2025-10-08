@@ -155,7 +155,15 @@ class WhisperTyperApp:
         try:
             # Transcribe audio
             print("[TRANSCRIPTION STARTED]")
+            
+            # Force UI update before starting heavy computation
+            self.ui.window.update_idletasks()
+            
             result = self.transcriber.transcribe(self.audio_buffer)
+            print("[TRANSCRIPTION COMPLETED]")
+            
+            # Force UI update after transcription
+            self.ui.window.update_idletasks()
             
             # Clean up audio buffer immediately (FR-026, FR-027)
             self.audio_buffer = None
@@ -164,19 +172,19 @@ class WhisperTyperApp:
             if result.text:
                 print("[TEXT INSERTION STARTED]")
                 self.session_state = SessionState.INSERTING
+                
+                # Type text in worker thread (it's already in worker thread)
                 self.text_inserter.type_text(result.text)
+                
                 print("[TEXT INSERTION COMPLETED]")
                 self.session_state = SessionState.COMPLETED
+                
+                # Schedule UI hide after short delay
+                self.ui.window.after(300, self.ui.hide)
             else:
                 print("Empty transcription - no text to insert")
                 self.session_state = SessionState.COMPLETED
-            
-            # Small delay before hiding to ensure text is fully typed
-            import time
-            time.sleep(0.3)
-            
-            # Hide UI after text insertion is complete
-            self.ui.hide()
+                self.ui.hide()
             
         except TranscriptionError as e:
             print(f"Transcription error: {e}")

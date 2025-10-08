@@ -235,7 +235,7 @@ class TranscriptionResult:
 ## 4. TextInserter
 
 **Module**: `src/text_inserter.py`  
-**Purpose**: Insert text into focused application via keyboard emulation
+**Purpose**: Insert text into focused application via clipboard paste (cross-platform)
 
 ### Class: TextInserter
 
@@ -247,13 +247,13 @@ def __init__(self, typing_speed: int = 100)
 
 **Parameters**:
 
-- `typing_speed` (int): Characters per second (default 100)
+- `typing_speed` (int): Unused (kept for compatibility), clipboard paste is instant
 
 #### Methods
 
 ##### type_text(text: str) → None
 
-Simulate typing text into currently focused application.
+Insert text into currently focused application via clipboard paste.
 
 **Parameters**:
 
@@ -261,20 +261,42 @@ Simulate typing text into currently focused application.
 
 **Side Effects**:
 
-- Sends keyboard events to OS
-- Blocks until all characters typed
+- Saves current clipboard content
+- Sets clipboard to new text
+- Simulates Ctrl+V (Linux/Windows) or Cmd+V (macOS) keypress
+- Restores original clipboard content
+
+**Platform-specific behavior**:
+
+- **Linux**: Uses `xclip` + `Ctrl+V`
+- **Windows**: Uses `win32clipboard` or PowerShell + `Ctrl+V`
+- **macOS**: Uses `pbcopy` + `Cmd+V`
+- **Fallback**: Uses pynput keyboard emulation if clipboard fails
 
 **Timing**:
 
-- Duration ≈ len(text) / typing_speed seconds
+- Duration ≈ 0.2s (instant paste, regardless of text length)
+
+**Advantages over keyboard emulation**:
+
+- 10-100x faster for long text
+- Perfect for Unicode (Cyrillic, Chinese, emoji, etc.)
+- No character-by-character delays
+- More reliable across all platforms
 
 **Example**:
 
 ```python
-inserter = TextInserter(typing_speed=100)
-inserter.type_text("Hello from dictation!")
-# Takes ~0.21s for 21 characters
+inserter = TextInserter()
+inserter.type_text("Привіт з диктування! 🎤")
+# Takes ~0.2s regardless of text length
 ```
+
+**Requirements**:
+
+- **Linux**: Requires `xclip` package (`sudo apt install xclip`)
+- **Windows**: Works natively (optional `pywin32` for better performance)
+- **macOS**: Works natively with `pbcopy`/`pbpaste`
 
 ---
 

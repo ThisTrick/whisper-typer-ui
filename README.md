@@ -7,6 +7,7 @@ Voice dictation application for Windows, macOS, and Linux.
 - **Global Hotkey Activation**: Press Ctrl+Alt+Space to start/stop recording from anywhere
 - **Local Processing**: All transcription happens on your device - no internet required
 - **Multi-Language Support**: Supports 99 languages via faster-whisper
+- **Fast Unicode Support**: Uses clipboard paste for instant text insertion (perfect for Cyrillic, Chinese, emoji)
 - **Simple UI**: Circular overlay in bottom-right corner with visual feedback
 - **Cross-Platform**: Works on Windows 10+, macOS 11+, and Linux (Ubuntu 20.04+)
 
@@ -18,6 +19,7 @@ Voice dictation application for Windows, macOS, and Linux.
    - Python 3.11 or higher
    - uv package manager: https://github.com/astral-sh/uv
    - Microphone access
+   - **Linux only**: `sudo apt install xclip` (for clipboard paste)
 
 2. **Clone and Install**:
    ```bash
@@ -123,9 +125,14 @@ vad_filter: true  # Skip silent parts (faster)
 
 - **Transcription Engine**: faster-whisper (CTranslate2-optimized Whisper)
 - **Audio Capture**: sounddevice
-- **Keyboard Emulation**: pynput
+- **Text Insertion**: Clipboard paste (instant, Unicode-safe)
+  - Linux: xclip + Ctrl+V
+  - Windows: Win32 API / PowerShell + Ctrl+V
+  - macOS: pbcopy + Cmd+V
+  - Fallback: pynput keyboard emulation
 - **UI Framework**: tkinter
 - **No Data Storage**: Audio is never saved to disk (privacy-focused)
+- **Clipboard Safety**: Original clipboard content is preserved and restored
 
 ## Development
 
