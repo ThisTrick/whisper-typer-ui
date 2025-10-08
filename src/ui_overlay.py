@@ -42,22 +42,21 @@ class UIOverlay:
         # Position in bottom-right corner
         self._position_window()
         
-        # Create canvas for drawing - minimal size
-        canvas_size = size - 40  # Smaller canvas, just for the circle
+        # Create canvas for drawing
         self.canvas = tk.Canvas(
             self.window,
-            width=canvas_size,
-            height=canvas_size,
+            width=size,
+            height=size,
             highlightthickness=0,
             bg='#1a1a1a'  # Dark gray background
         )
-        self.canvas.place(x=20, y=20)  # Center the canvas
+        self.canvas.pack()
         
         # Draw circle background (filled)
-        padding = 10
+        padding = 30
         self.bg_circle_id = self.canvas.create_oval(
             padding, padding,
-            canvas_size - padding, canvas_size - padding,
+            size - padding, size - padding,
             fill='#2d2d2d',  # Slightly lighter gray for circle background
             outline=''
         )
@@ -65,7 +64,7 @@ class UIOverlay:
         # Draw circle outline
         self.circle_id = self.canvas.create_oval(
             padding, padding,
-            canvas_size - padding, canvas_size - padding,
+            size - padding, size - padding,
             outline='#ff4444',  # Brighter red
             width=9
         )
@@ -146,8 +145,8 @@ class UIOverlay:
         
         try:
             image = Image.open(str(icon_path))  # Convert Path to string
-            # Resize to fit inside circle
-            icon_size = int(self.size * 0.5)
+            # Resize to fit inside circle - use smaller size for better proportions
+            icon_size = int(self.size * 0.35)  # 35% of window size instead of 50%
             # Use LANCZOS for high-quality resampling (fallback to BICUBIC if not available)
             try:
                 resample_method = Image.Resampling.LANCZOS
