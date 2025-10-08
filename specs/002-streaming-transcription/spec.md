@@ -2,7 +2,7 @@
 
 **Feature Branch**: `002-streaming-transcription`  
 **Created**: 2025-10-08  
-**Status**: Draft  
+**Status**: Completed  
 **Input**: User description: "Need a new feature that will split the audio that a person records every 30 seconds, or like, take it every 30 seconds, do transcription in a parallel stream and insert it where needed. Why is this needed? This is needed so that when a person records very long audio recordings, we can efficiently process them, without the person having to wait another 20 minutes after a 10-minute recording for the model to process their recording. Configuration should probably be done through a config file. I specifically mean configuring the length of this batch."
 
 ## Overview
