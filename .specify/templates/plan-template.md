@@ -31,7 +31,13 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] **Simplicity First**: Architecture uses simplest possible solution, no unnecessary abstractions
+- [ ] **User Installation Priority**: Installation is frictionless with minimal user steps
+- [ ] **No Automated Testing**: No test frameworks or automated test infrastructure
+- [ ] **Minimal Documentation**: Documentation limited to essential README only
+- [ ] **Dependency Minimization**: Third-party dependencies minimized and justified
+- [ ] **Cross-Platform**: Solution works consistently across target platforms
+
 
 ## Project Structure
 
