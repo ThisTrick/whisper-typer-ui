@@ -61,13 +61,23 @@ class UIOverlay:
             outline=''
         )
         
-        # Draw circle outline
+        # Draw main circle outline (constant)
         self.circle_id = self.canvas.create_oval(
             padding, padding,
             size - padding, size - padding,
             outline='#ff4444',  # Brighter red
-            width=9
+            width=6
         )
+        
+        # Draw glow circle outline (for pulsation effect)
+        self.glow_circle_id = self.canvas.create_oval(
+            padding - 3, padding - 3,
+            size - padding + 3, size - padding + 3,
+            outline='#ff4444',  # Same color as main circle
+            width=3
+        )
+        # Hide glow initially
+        self.canvas.itemconfig(self.glow_circle_id, state='hidden')
         
         # Icon placeholder
         self.icon_id = None
@@ -78,6 +88,7 @@ class UIOverlay:
         # Pulsation state
         self.pulsating = False
         self._pulsation_job = None
+        self._current_border_color = '#ff4444'  # Store current border color for glow
         
         # Rotation state (for processing animation)
         self.rotating = False
@@ -202,8 +213,8 @@ class UIOverlay:
         if self._pulsation_job:
             self.window.after_cancel(self._pulsation_job)
             self._pulsation_job = None
-        # Reset to default width
-        self.canvas.itemconfig(self.circle_id, width=9)
+        # Hide glow circle
+        self.canvas.itemconfig(self.glow_circle_id, state='hidden')
         # Reset pulsation time
         if hasattr(self, '_pulsation_time'):
             delattr(self, '_pulsation_time')
@@ -263,7 +274,7 @@ class UIOverlay:
         self._rotation_job = self.window.after(30, self._rotate)
     
     def _pulsate(self) -> None:
-        """Pulsation animation step."""
+        """Pulsation animation step with smooth color brightness pulsing."""
         if not self.pulsating:
             return
         
@@ -273,18 +284,38 @@ class UIOverlay:
             self._pulsation_time = 0
         
         # Increment time
-        self._pulsation_time += 0.1
+        self._pulsation_time += 0.12
         
-        # Calculate width using sine wave (range 6-12 for smooth effect)
-        min_width = 6
-        max_width = 12
-        amplitude = (max_width - min_width) / 2
-        offset = (max_width + min_width) / 2
-        new_width = offset + amplitude * math.sin(self._pulsation_time)
+        # Calculate brightness using sine wave (0.5 to 1.0)
+        intensity = 0.5 + 0.5 * ((math.sin(self._pulsation_time) + 1) / 2)
         
-        self.canvas.itemconfig(self.circle_id, width=int(new_width))
+        # Parse current color and apply brightness
+        color = self._current_border_color
+        if color.startswith('#') and len(color) == 7:
+            # Extract RGB components
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            
+            # Apply intensity to main circle
+            pulse_r = int(r * intensity)
+            pulse_g = int(g * intensity)
+            pulse_b = int(b * intensity)
+            pulse_color = f'#{pulse_r:02x}{pulse_g:02x}{pulse_b:02x}'
+            
+            # Update main circle with pulsing color (fixed width)
+            self.canvas.itemconfig(self.circle_id, outline=pulse_color)
+            
+            # Glow circle with brighter color (also fixed width)
+            glow_intensity = 0.7 + 0.3 * ((math.sin(self._pulsation_time) + 1) / 2)
+            glow_r = min(255, int(r * glow_intensity))
+            glow_g = min(255, int(g * glow_intensity))
+            glow_b = min(255, int(b * glow_intensity))
+            glow_color = f'#{glow_r:02x}{glow_g:02x}{glow_b:02x}'
+            
+            self.canvas.itemconfig(self.glow_circle_id, state='normal', outline=glow_color, width=6)
         
-        # Schedule next pulsation (50ms = 20 FPS for very smooth animation)
+        # Schedule next pulsation (50ms = 20 FPS)
         self._pulsation_job = self.window.after(50, self._pulsate)
     
     def show_error(self, message: str, duration: float = 2.5) -> None:
@@ -305,9 +336,13 @@ class UIOverlay:
         """Set the border color.
         
         Args:
-            color: Color name (e.g., 'red', 'blue', 'green')
+            color: Color hex code (e.g., '#ff4444', '#4488ff')
         """
-        self.window.after(0, lambda: self.canvas.itemconfig(self.circle_id, outline=color))
+        def _set_color():
+            self._current_border_color = color
+            self.canvas.itemconfig(self.circle_id, outline=color)
+        
+        self.window.after(0, _set_color)
     
     def set_click_callback(self, callback: Callable[[], None]) -> None:
         """Set callback for click events.
