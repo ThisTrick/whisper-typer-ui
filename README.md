@@ -163,9 +163,10 @@ compute_type: "int8"  # int8=fastest, float32=highest quality
 | `tiny` | 75MB | ⚡⚡⚡ | ⭐⭐ | Real-time dictation |
 | `base` | 140MB | ⚡⚡ | ⭐⭐⭐ | Balanced usage |
 | `small` | 460MB | ⚡ | ⭐⭐⭐⭐ | High accuracy |
-| `large-v3` | 3GB | 🐌 | ⭐⭐⭐⭐⭐ | Professional transcription |
+| `medium` | 1.5GB | 🐌 | ⭐⭐⭐⭐ | Better accuracy |
+| `large-v3` | 3GB | 🐌🐌 | ⭐⭐⭐⭐⭐ | Professional transcription |
 
-**Recommendation**: Start with `tiny` for speed, upgrade to `base` if accuracy is insufficient.
+**Recommendation**: Start with `tiny` for speed, upgrade to `base` or `medium` if accuracy is insufficient.
 
 ---
 
