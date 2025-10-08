@@ -109,7 +109,7 @@ class WhisperTyperApp:
             
             # Show UI with microphone icon and pulsation
             self.ui.show()
-            self.ui.set_border_color('red')
+            self.ui.set_border_color('#ff4444')  # Bright red
             self.ui.set_icon(IconType.MICROPHONE)
             self.ui.start_pulsation()
             
@@ -138,7 +138,8 @@ class WhisperTyperApp:
         
         # Change UI to processing icon (without pulsation - static border)
         self.ui.set_icon(IconType.PROCESSING)
-        self.ui.set_border_color('blue')  # Different color for processing
+        self.ui.set_border_color('#4488ff')  # Bright blue
+        self.ui.start_rotation()  # Start rotating the processing icon
         
         # Process transcription in worker thread
         transcription_thread = threading.Thread(
@@ -172,13 +173,17 @@ class WhisperTyperApp:
             
         except TranscriptionError as e:
             print(f"Transcription error: {e}")
+            self.ui.stop_rotation()
             self.ui.show_error("Transcription failed", duration=2.5)
             self.session_state = SessionState.ERROR
         except Exception as e:
             print(f"Unexpected error: {e}")
+            self.ui.stop_rotation()
             self.ui.show_error("Error occurred", duration=2.5)
             self.session_state = SessionState.ERROR
         finally:
+            # Ensure rotation is stopped
+            self.ui.stop_rotation()
             # Ensure audio buffer is cleaned up
             self.audio_buffer = None
             # Return to idle state

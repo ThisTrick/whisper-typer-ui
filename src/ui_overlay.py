@@ -40,27 +40,41 @@ class UIOverlay:
             width=size,
             height=size,
             highlightthickness=0,
-            bg='gray15'
+            bg='#1a1a1a'  # Dark gray background instead of gray15
         )
         self.canvas.pack()
         
+        # Draw circle background (filled)
+        padding = 30
+        self.bg_circle_id = self.canvas.create_oval(
+            padding, padding,
+            size - padding, size - padding,
+            fill='#2d2d2d',  # Slightly lighter gray for circle background
+            outline=''
+        )
+        
         # Draw circle outline
-        padding = 30  # Increased for larger UI
         self.circle_id = self.canvas.create_oval(
             padding, padding,
             size - padding, size - padding,
-            outline='red',
-            width=9  # Increased from 3 to 9 (3x)
+            outline='#ff4444',  # Brighter red
+            width=9
         )
         
         # Icon placeholder
         self.icon_id = None
         self.current_icon: IconType | None = None
         self._photo_image = None  # Keep reference to prevent garbage collection
+        self._original_image = None  # Keep original PIL image for rotation
         
         # Pulsation state
         self.pulsating = False
         self._pulsation_job = None
+        
+        # Rotation state (for processing animation)
+        self.rotating = False
+        self._rotation_job = None
+        self._rotation_angle = 0
         
         # Click callback
         self.click_callback: Callable[[], None] | None = None
@@ -132,6 +146,9 @@ class UIOverlay:
                 resample_method = Image.LANCZOS
             image = image.resize((icon_size, icon_size), resample_method)
             
+            # Store original image for rotation
+            self._original_image = image.copy()
+            
             # Convert to PNG in memory and use tkinter's PhotoImage
             # This avoids PIL ImageTk threading issues
             import io
@@ -177,35 +194,90 @@ class UIOverlay:
         if self._pulsation_job:
             self.window.after_cancel(self._pulsation_job)
             self._pulsation_job = None
-        # Reset to default width (3x larger)
+        # Reset to default width
         self.canvas.itemconfig(self.circle_id, width=9)
-        # Reset pulsation direction
-        if hasattr(self, '_pulsation_direction'):
-            delattr(self, '_pulsation_direction')
+        # Reset pulsation time
+        if hasattr(self, '_pulsation_time'):
+            delattr(self, '_pulsation_time')
+    
+    def start_rotation(self) -> None:
+        """Begin rotating icon animation (for processing state)."""
+        self.window.after(0, self._do_start_rotation)
+    
+    def _do_start_rotation(self) -> None:
+        """Actually start rotation (called in main thread)."""
+        self.rotating = True
+        self._rotation_angle = 0
+        self._rotate()
+    
+    def stop_rotation(self) -> None:
+        """Stop rotating icon animation."""
+        self.window.after(0, self._do_stop_rotation)
+    
+    def _do_stop_rotation(self) -> None:
+        """Actually stop rotation (called in main thread)."""
+        self.rotating = False
+        if self._rotation_job:
+            self.window.after_cancel(self._rotation_job)
+            self._rotation_job = None
+        self._rotation_angle = 0
+    
+    def _rotate(self) -> None:
+        """Rotation animation step."""
+        if not self.rotating or not self.icon_id:
+            return
+        
+        # Rotate icon
+        self._rotation_angle = (self._rotation_angle + 10) % 360
+        
+        # Re-create icon with rotation
+        if self.current_icon and self._original_image:
+            try:
+                # Rotate image
+                rotated = self._original_image.rotate(-self._rotation_angle, expand=False)
+                
+                # Convert to PNG in memory
+                import io
+                buffer = io.BytesIO()
+                rotated.save(buffer, format='PNG')
+                buffer.seek(0)
+                
+                # Update PhotoImage
+                self._photo_image = tk.PhotoImage(data=buffer.getvalue())
+                
+                # Update canvas
+                if self.icon_id:
+                    self.canvas.itemconfig(self.icon_id, image=self._photo_image)
+            except Exception as e:
+                print(f"Error rotating icon: {e}")
+        
+        # Schedule next rotation (30ms = ~33 FPS for smooth rotation)
+        self._rotation_job = self.window.after(30, self._rotate)
     
     def _pulsate(self) -> None:
         """Pulsation animation step."""
         if not self.pulsating:
             return
         
-        # Smooth pulsation between width 6 and 15 (3x larger)
-        current_width = float(self.canvas.itemcget(self.circle_id, 'width'))
+        # Use sine wave for smooth pulsation
+        import math
+        if not hasattr(self, '_pulsation_time'):
+            self._pulsation_time = 0
         
-        # Toggle between widths for smooth pulsation
-        if not hasattr(self, '_pulsation_direction'):
-            self._pulsation_direction = 1  # 1 = growing, -1 = shrinking
+        # Increment time
+        self._pulsation_time += 0.1
         
-        # Increment/decrement width
-        if current_width >= 15:
-            self._pulsation_direction = -1
-        elif current_width <= 6:
-            self._pulsation_direction = 1
+        # Calculate width using sine wave (range 6-12 for smooth effect)
+        min_width = 6
+        max_width = 12
+        amplitude = (max_width - min_width) / 2
+        offset = (max_width + min_width) / 2
+        new_width = offset + amplitude * math.sin(self._pulsation_time)
         
-        new_width = current_width + (1.5 * self._pulsation_direction)  # 3x step size
-        self.canvas.itemconfig(self.circle_id, width=new_width)
+        self.canvas.itemconfig(self.circle_id, width=int(new_width))
         
-        # Schedule next pulsation (100ms = 10 FPS for smoother animation)
-        self._pulsation_job = self.window.after(100, self._pulsate)
+        # Schedule next pulsation (50ms = 20 FPS for very smooth animation)
+        self._pulsation_job = self.window.after(50, self._pulsate)
     
     def show_error(self, message: str, duration: float = 2.5) -> None:
         """Display error briefly.
