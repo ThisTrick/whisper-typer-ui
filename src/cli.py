@@ -29,18 +29,24 @@ def cmd_start() -> None:
     
     # Launch daemon in background
     try:
+        # Get the whisper-typer executable path
+        import shutil
+        whisper_typer_cmd = shutil.which("whisper-typer")
+        if not whisper_typer_cmd:
+            print("ERROR: whisper-typer command not found in PATH")
+            sys.exit(1)
+        
         # Start daemon as detached process
         if os.name == 'nt':  # Windows
-            # Windows requires different approach
             subprocess.Popen(
-                [sys.executable, "-c", "from src.daemon import start_daemon; start_daemon()"],
+                [whisper_typer_cmd, "daemon"],
                 creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
         else:  # Unix-like (Linux, macOS)
             subprocess.Popen(
-                [sys.executable, "-c", "from src.daemon import start_daemon; start_daemon()"],
+                [whisper_typer_cmd, "daemon"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True

@@ -79,10 +79,19 @@ def start_daemon() -> None:
     
     try:
         # Import and run existing application
-        # Note: The import is done here to avoid circular dependencies
-        from src import whisper_typer_ui
+        # Note: Using importlib to import file with dashes in name
+        import importlib.util
+        
+        # Determine the path to whisper-typer-ui.py
+        src_dir = os.path.dirname(os.path.abspath(__file__))
+        main_file = os.path.join(src_dir, "whisper-typer-ui.py")
+        
+        # Load module dynamically
+        spec = importlib.util.spec_from_file_location("whisper_typer_ui", main_file)
+        whisper_typer_ui = importlib.util.module_from_spec(spec)
         
         logging.info("Starting whisper-typer-ui application...")
+        spec.loader.exec_module(whisper_typer_ui)
         whisper_typer_ui.main()
     except Exception as e:
         logging.error(f"Application crashed: {e}", exc_info=True)
