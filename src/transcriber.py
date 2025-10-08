@@ -5,7 +5,8 @@ import time
 import numpy as np
 from faster_whisper import WhisperModel
 
-from utils import TranscriptionResult, TranscriptionError, ModelLoadError
+from audio_recorder import AudioChunk
+from utils import TranscriptionResult, TranscriptionError, ModelLoadError, ChunkTranscriptionResult
 
 
 class Transcriber:
@@ -110,3 +111,41 @@ class Transcriber:
             
         except Exception as e:
             raise TranscriptionError(e, audio_length)
+    
+    def transcribe_chunk(self, chunk: AudioChunk) -> ChunkTranscriptionResult:
+        """Transcribe a single audio chunk for streaming mode.
+        
+        Args:
+            chunk: AudioChunk with data, sequence, and start_time
+            
+        Returns:
+            ChunkTranscriptionResult with sequence, text, and optional error
+        """
+        try:
+            # Transcribe chunk audio
+            segments, info = self.model.transcribe(
+                chunk.data,
+                language=self.language,
+                beam_size=self.beam_size,
+                vad_filter=self.vad_filter,
+                without_timestamps=True
+            )
+            
+            # Collect transcribed text
+            segments = list(segments)
+            text = " ".join([seg.text for seg in segments]).strip()
+            
+            return ChunkTranscriptionResult(
+                sequence=chunk.sequence,
+                text=text,
+                error=None
+            )
+            
+        except Exception as e:
+            # Return error result instead of raising
+            return ChunkTranscriptionResult(
+                sequence=chunk.sequence,
+                text="",
+                error=str(e)
+            )
+

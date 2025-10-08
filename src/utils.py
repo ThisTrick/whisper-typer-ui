@@ -102,3 +102,18 @@ class TranscriptionResult:
             raise ValueError(f"Confidence must be between 0.0 and 1.0, got {self.confidence}")
         if self.processing_time < 0:
             raise ValueError(f"Processing time must be positive, got {self.processing_time}")
+
+
+@dataclass
+class ChunkTranscriptionResult:
+    """Result from transcribing a single audio chunk.
+    
+    Attributes:
+        sequence: Sequential chunk number matching the input AudioChunk
+        text: Transcribed text content
+        error: Optional error message if transcription failed
+    """
+    sequence: int
+    text: str
+    error: Optional[str] = None
+

@@ -1,9 +1,24 @@
 """Audio recorder module for Whisper Typer UI."""
 
+from dataclasses import dataclass
 import numpy as np
 import sounddevice as sd
 
 from utils import MicrophoneError
+
+
+@dataclass
+class AudioChunk:
+    """Represents a chunk of recorded audio with metadata.
+    
+    Attributes:
+        data: NumPy array of audio samples
+        sequence: Sequential chunk number (0-indexed)
+        start_time: Recording start time in seconds (relative to session start)
+    """
+    data: np.ndarray
+    sequence: int
+    start_time: float
 
 
 class AudioRecorder:
@@ -23,6 +38,10 @@ class AudioRecorder:
         self.channels = channels
         self._recording: list[np.ndarray] = []
         self._stream: sd.InputStream | None = None
+        
+        # Streaming session metadata (initialized in start_recording)
+        self.chunk_start_time: float = 0.0
+        self.current_sequence: int = 0
         
         # Verify microphone is available
         try:
@@ -58,6 +77,10 @@ class AudioRecorder:
         try:
             # Clear previous recording
             self._recording = []
+            
+            # Initialize streaming session metadata
+            self.chunk_start_time = 0.0
+            self.current_sequence = 0
             
             # Start audio stream
             self._stream = sd.InputStream(
@@ -100,6 +123,54 @@ class AudioRecorder:
         self._recording = []
         
         return audio_buffer.astype(np.float32)
+    
+    def get_elapsed_time(self) -> float:
+        """Get elapsed time since recording started.
+        
+        Returns:
+            Time in seconds since start_recording() was called
+        """
+        if not self._recording:
+            return 0.0
+        
+        # Calculate total samples recorded
+        total_samples = sum(chunk.shape[0] for chunk in self._recording)
+        return total_samples / self.sample_rate
+    
+    def extract_chunk(self) -> AudioChunk:
+        """Extract accumulated audio as a chunk with metadata.
+        
+        Returns:
+            AudioChunk with data, sequence number, and start time
+            
+        Side Effects:
+            - Clears internal _recording buffer
+            - Increments current_sequence
+            - Updates chunk_start_time to current elapsed time
+        """
+        # Concatenate all recorded chunks
+        if not self._recording:
+            audio_data = np.array([], dtype=np.float32)
+        else:
+            audio_data = np.concatenate(self._recording, axis=0)
+            # Flatten to 1D if stereo
+            if audio_data.ndim > 1:
+                audio_data = audio_data.flatten()
+            audio_data = audio_data.astype(np.float32)
+        
+        # Create chunk with current metadata
+        chunk = AudioChunk(
+            data=audio_data,
+            sequence=self.current_sequence,
+            start_time=self.chunk_start_time
+        )
+        
+        # Clear buffer and update metadata
+        self._recording = []
+        self.current_sequence += 1
+        self.chunk_start_time = self.get_elapsed_time()
+        
+        return chunk
     
     def is_recording(self) -> bool:
         """Check if currently recording.
