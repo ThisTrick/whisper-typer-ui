@@ -4,7 +4,7 @@ import tkinter as tk
 from pathlib import Path
 from typing import Callable
 
-from PIL import Image, ImageTk
+from PIL import Image
 
 from utils import IconType
 
@@ -82,11 +82,21 @@ class UIOverlay:
     
     def show(self) -> None:
         """Make window visible."""
+        # Schedule in tkinter's main thread
+        self.window.after(0, self._do_show)
+    
+    def _do_show(self) -> None:
+        """Actually show the window (called in main thread)."""
         self.window.deiconify()
         self.window.lift()
     
     def hide(self) -> None:
         """Make window invisible."""
+        # Schedule in tkinter's main thread
+        self.window.after(0, self._do_hide)
+    
+    def _do_hide(self) -> None:
+        """Actually hide the window (called in main thread)."""
         self.window.withdraw()
     
     def set_icon(self, icon_type: IconType) -> None:
@@ -95,6 +105,11 @@ class UIOverlay:
         Args:
             icon_type: Icon to display
         """
+        # Schedule in tkinter's main thread
+        self.window.after(0, lambda: self._do_set_icon(icon_type))
+    
+    def _do_set_icon(self, icon_type: IconType) -> None:
+        """Actually set the icon (called in main thread)."""
         self.current_icon = icon_type
         
         # Load icon image
@@ -107,8 +122,21 @@ class UIOverlay:
             image = Image.open(str(icon_path))  # Convert Path to string
             # Resize to fit inside circle
             icon_size = int(self.size * 0.5)
-            image = image.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
-            self._photo_image = ImageTk.PhotoImage(image)
+            # Use LANCZOS for high-quality resampling (fallback to BICUBIC if not available)
+            try:
+                resample_method = Image.Resampling.LANCZOS
+            except AttributeError:
+                resample_method = Image.LANCZOS
+            image = image.resize((icon_size, icon_size), resample_method)
+            
+            # Convert to PNG in memory and use tkinter's PhotoImage
+            # This avoids PIL ImageTk threading issues
+            import io
+            buffer = io.BytesIO()
+            image.save(buffer, format='PNG')
+            buffer.seek(0)
+            
+            self._photo_image = tk.PhotoImage(data=buffer.getvalue())
             
             # Remove old icon if exists
             if self.icon_id:
@@ -122,14 +150,26 @@ class UIOverlay:
             )
         except Exception as e:
             print(f"Error loading icon {icon_path}: {e}")
+            import traceback
+            traceback.print_exc()
     
     def start_pulsation(self) -> None:
         """Begin pulsating border animation."""
+        # Schedule in tkinter's main thread
+        self.window.after(0, self._do_start_pulsation)
+    
+    def _do_start_pulsation(self) -> None:
+        """Actually start pulsation (called in main thread)."""
         self.pulsating = True
         self._pulsate()
     
     def stop_pulsation(self) -> None:
         """Stop pulsating border animation."""
+        # Schedule in tkinter's main thread
+        self.window.after(0, self._do_stop_pulsation)
+    
+    def _do_stop_pulsation(self) -> None:
+        """Actually stop pulsation (called in main thread)."""
         self.pulsating = False
         if self._pulsation_job:
             self.window.after_cancel(self._pulsation_job)

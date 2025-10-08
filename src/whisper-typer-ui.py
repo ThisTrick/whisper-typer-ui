@@ -108,9 +108,9 @@ class WhisperTyperApp:
             self.recorder.start_recording()
             
             # Show UI with microphone icon and pulsation
+            self.ui.show()
             self.ui.set_icon(IconType.MICROPHONE)
             self.ui.start_pulsation()
-            self.ui.show()
             
             print(f"Recording... (Press {self.config.hotkey_combo} or click to stop)")
             
