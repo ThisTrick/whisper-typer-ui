@@ -1,5 +1,6 @@
 """Streaming transcription session manager for Whisper Typer UI."""
 
+import logging
 from concurrent.futures import ThreadPoolExecutor, Future
 from queue import Queue
 from typing import Callable, Optional
@@ -7,6 +8,9 @@ import threading
 
 from audio_recorder import AudioChunk
 from utils import ChunkTranscriptionResult
+
+
+logger = logging.getLogger(__name__)
 
 
 class StreamingSession:
@@ -63,7 +67,7 @@ class StreamingSession:
         if self._has_error:
             return  # Don't submit new work if session has error
         
-        print(f"[CHUNK {chunk.sequence}] Submitted to transcription queue (worker pool)")
+        logger.info(f"[CHUNK {chunk.sequence}] Submitted to transcription queue (worker pool)")
         future = self._executor.submit(self._worker_thread, chunk)
         future.add_done_callback(self._on_chunk_complete)
         self._active_futures.append(future)
@@ -77,14 +81,14 @@ class StreamingSession:
         Returns:
             ChunkTranscriptionResult with sequence, text, and optional error
         """
-        print(f"[CHUNK {chunk.sequence}] Worker started transcription...")
+        logger.info(f"[CHUNK {chunk.sequence}] Worker started transcription...")
         try:
             result = self._transcribe_fn(chunk)
-            print(f"[CHUNK {chunk.sequence}] Worker finished transcription: {len(result.text)} chars")
+            logger.info(f"[CHUNK {chunk.sequence}] Worker finished transcription: {len(result.text)} chars")
             return result
         except Exception as e:
             # Return error result instead of raising
-            print(f"[CHUNK {chunk.sequence}] Worker error: {e}")
+            logger.error(f"[CHUNK {chunk.sequence}] Worker error: {e}")
             return ChunkTranscriptionResult(
                 sequence=chunk.sequence,
                 text="",
@@ -111,7 +115,7 @@ class StreamingSession:
                 self._on_error(Exception(f"Chunk {result.sequence} error: {result.error}"))
                 return
             
-            print(f"[CHUNK {result.sequence}] Transcription complete: {len(result.text)} characters")
+            logger.info(f"[CHUNK {result.sequence}] Transcription complete: {len(result.text)} characters")
             
             # Store completed chunk and insert text in thread-safe manner
             with self._lock:
@@ -121,7 +125,7 @@ class StreamingSession:
                 while self._next_insert_sequence in self._completed_chunks:
                     chunk_result = self._completed_chunks.pop(self._next_insert_sequence)
                     if chunk_result.text and not chunk_result.error:  # Only insert non-empty text
-                        print(f"[CHUNK {chunk_result.sequence}] Inserting text now")
+                        logger.info(f"[CHUNK {chunk_result.sequence}] Inserting text now")
                         self._insert_text_fn(chunk_result.text)
                     self._next_insert_sequence += 1
                 
@@ -139,26 +143,26 @@ class StreamingSession:
             - Shuts down executor
             - Inserts all buffered text
         """
-        print("[FINALIZE] Waiting for all worker threads to complete...")
+        logger.info("[FINALIZE] Waiting for all worker threads to complete...")
         # Shutdown executor and wait for all workers
         self._executor.shutdown(wait=True)
-        print("[FINALIZE] All workers completed")
+        logger.info("[FINALIZE] All workers completed")
         
         # Insert any remaining buffered chunks in order (thread-safe)
         # Note: Chunks already inserted in _on_chunk_complete were pop()'d from buffer
         with self._lock:
             sequences = sorted(self._completed_chunks.keys())
             if sequences:
-                print(f"[FINALIZE] Found {len(sequences)} chunks still in buffer - inserting now")
+                logger.info(f"[FINALIZE] Found {len(sequences)} chunks still in buffer - inserting now")
                 
                 for seq in sequences:
                     result = self._completed_chunks[seq]
                     if result.text and not result.error:
-                        print(f"[CHUNK {seq}] Inserting remaining text ({len(result.text)} chars)")
+                        logger.info(f"[CHUNK {seq}] Inserting remaining text ({len(result.text)} chars)")
                         self._insert_text_fn(result.text)
             else:
-                print(f"[FINALIZE] No chunks in buffer - all were inserted during recording")
+                logger.info("[FINALIZE] No chunks in buffer - all were inserted during recording")
             
             # Clear the buffer
             self._completed_chunks.clear()
-            print("[FINALIZE] Buffer cleared")
+            logger.info("[FINALIZE] Buffer cleared")

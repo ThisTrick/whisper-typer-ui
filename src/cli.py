@@ -1,14 +1,46 @@
 """CLI entry point for whisper-typer command."""
 
 import argparse
+import logging
 import os
 import signal
 import subprocess
 import sys
 import time
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
+from typing import List, Optional
+
+import shutil
 
 from src import process_lock, daemon, service_manager, config_manager
+
+
+logger = logging.getLogger(__name__)
+
+
+def _find_pythonw_executable() -> Optional[str]:
+    """Return pythonw.exe path when available (Windows only)."""
+    candidates = [
+        shutil.which("pythonw.exe"),
+        shutil.which("pythonw"),
+        str(Path(sys.executable).with_name("pythonw.exe")),
+    ]
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            return candidate
+    return None
+
+
+def _build_windows_launch_cmd(default_cli: Optional[str]) -> List[str]:
+    """Build a background launch command for Windows that hides the console."""
+    pythonw_path = _find_pythonw_executable()
+    if pythonw_path:
+        return [pythonw_path, "-m", "src.daemon"]
+    if default_cli:
+        return [default_cli, "daemon"]
+    # Fall back to python executable if everything else fails
+    return [sys.executable, "-m", "src.cli", "daemon"]
 
 
 def get_version() -> str:
@@ -24,32 +56,45 @@ def cmd_start() -> None:
     # Check if already running
     running, pid = process_lock.is_service_running()
     if running:
-        print(f"Service is already running (PID: {pid})")
+        logger.info(f"Service is already running (PID: {pid})")
         sys.exit(1)
     
     # Launch daemon in background
     try:
-        # Get the whisper-typer executable path
-        import shutil
+        # Get the whisper-typer executable path if available (installed via uv/pip)
         whisper_typer_cmd = shutil.which("whisper-typer")
-        if not whisper_typer_cmd:
-            print("ERROR: whisper-typer command not found in PATH")
-            sys.exit(1)
         
         # Start daemon as detached process
         if os.name == 'nt':  # Windows
+            launch_cmd = _build_windows_launch_cmd(whisper_typer_cmd)
+            creationflags = getattr(subprocess, "DETACHED_PROCESS", 0) | subprocess.CREATE_NEW_PROCESS_GROUP
+            creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            startupinfo = subprocess.STARTUPINFO()  # type: ignore[attr-defined]
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore[attr-defined]
+            startupinfo.wShowWindow = 0  # type: ignore[attr-defined]
+            env = os.environ.copy()
+            env.setdefault("WHISPER_TYPER_HIDE_CONSOLE", "1")
+            env.setdefault("PYTHONUNBUFFERED", "1")
             subprocess.Popen(
-                [whisper_typer_cmd, "daemon"],
-                creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+                launch_cmd,
+                creationflags=creationflags,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                close_fds=True,
+                startupinfo=startupinfo,
+                env=env,
             )
         else:  # Unix-like (Linux, macOS)
+            if not whisper_typer_cmd:
+                logger.error("whisper-typer command not found in PATH")
+                sys.exit(1)
             subprocess.Popen(
                 [whisper_typer_cmd, "daemon"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                start_new_session=True
+                start_new_session=True,
+                close_fds=True,
             )
         
         # Give it a moment to start
@@ -58,12 +103,12 @@ def cmd_start() -> None:
         # Verify it started
         running, pid = process_lock.is_service_running()
         if running:
-            print(f"Service started successfully (PID: {pid})")
+            logger.info(f"Service started successfully (PID: {pid})")
         else:
-            print("Service failed to start. Check logs at ~/.whisper-typer/logs/")
+            logger.error("Service failed to start. Check logs at ~/.whisper-typer/logs/")
             sys.exit(1)
     except Exception as e:
-        print(f"Error starting service: {e}")
+        logger.error(f"Error starting service: {e}")
         sys.exit(1)
 
 
@@ -72,7 +117,7 @@ def cmd_stop() -> None:
     running, pid = process_lock.is_service_running()
     
     if not running:
-        print("Service is not running")
+        logger.info("Service is not running")
         sys.exit(0)
     
     try:
@@ -87,20 +132,20 @@ def cmd_stop() -> None:
         for _ in range(20):
             time.sleep(0.1)
             if not process_lock.is_service_running()[0]:
-                print("Service stopped successfully")
+                logger.info("Service stopped successfully")
                 return
         
         # If still running, force kill
         if os.name != 'nt':
             os.kill(pid, signal.SIGKILL)
         
-        print("Service stopped (forced)")
+        logger.info("Service stopped (forced)")
     except ProcessLookupError:
         # Process already died
         process_lock.release_lock()
-        print("Service stopped")
+        logger.info("Service stopped")
     except Exception as e:
-        print(f"Error stopping service: {e}")
+        logger.error(f"Error stopping service: {e}")
         sys.exit(1)
 
 
@@ -109,8 +154,8 @@ def cmd_status() -> None:
     running, pid = process_lock.is_service_running()
     
     if running:
-        print(f"Service Status: RUNNING")
-        print(f"Process ID: {pid}")
+        logger.info(f"Service Status: RUNNING")
+        logger.info(f"Process ID: {pid}")
         
         # Calculate uptime
         try:
@@ -123,20 +168,20 @@ def cmd_status() -> None:
             minutes = int((uptime_seconds % 3600) // 60)
             
             if hours > 0:
-                print(f"Uptime: {hours} hours {minutes} minutes")
+                logger.info(f"Uptime: {hours} hours {minutes} minutes")
             else:
-                print(f"Uptime: {minutes} minutes")
+                logger.info(f"Uptime: {minutes} minutes")
         except Exception:
             # If uptime calculation fails, just skip it
             pass
     else:
-        print("Service Status: STOPPED")
+        logger.info("Service Status: STOPPED")
     
     # Show auto-start status
     try:
         manager = service_manager.ServiceManager()
         auto_start = manager.get_auto_start_status()
-        print(f"Auto-start: {'Enabled' if auto_start else 'Disabled'}")
+        logger.info(f"Auto-start: {'Enabled' if auto_start else 'Disabled'}")
     except Exception:
         # If we can't check auto-start status, skip it
         pass
@@ -154,20 +199,20 @@ def cmd_enable() -> None:
         
         # Check current status
         if sm.get_auto_start_status():
-            print("Auto-start is already enabled")
+            logger.info("Auto-start is already enabled")
             sys.exit(0)
         
         # Enable auto-start
         sm.enable()
-        print("✓ Auto-start enabled successfully")
-        print("The service will start automatically on system boot")
+        logger.info("✓ Auto-start enabled successfully")
+        logger.info("The service will start automatically on system boot")
         
     except PermissionError as e:
-        print(f"ERROR: Permission denied - {e}")
-        print("Try running with appropriate privileges")
+        logger.error(f"Permission denied - {e}")
+        logger.error("Try running with appropriate privileges")
         sys.exit(1)
     except Exception as e:
-        print(f"ERROR: Failed to enable auto-start - {e}")
+        logger.error(f"Failed to enable auto-start - {e}")
         sys.exit(1)
 
 
@@ -178,27 +223,27 @@ def cmd_disable() -> None:
         
         # Check current status
         if not sm.get_auto_start_status():
-            print("Auto-start is already disabled")
+            logger.info("Auto-start is already disabled")
             sys.exit(0)
         
         # Check if service is running - warn but don't prevent
         running, pid = process_lock.is_service_running()
         if running:
-            print(f"WARNING: Service is currently running (PID: {pid})")
-            print("Disabling auto-start will not stop the current session")
-            print("Use 'whisper-typer stop' to stop the service now")
+            logger.warning(f"Service is currently running (PID: {pid})")
+            logger.warning("Disabling auto-start will not stop the current session")
+            logger.warning("Use 'whisper-typer stop' to stop the service now")
         
         # Disable auto-start
         sm.disable()
-        print("✓ Auto-start disabled successfully")
-        print("The service will no longer start automatically on system boot")
+        logger.info("✓ Auto-start disabled successfully")
+        logger.info("The service will no longer start automatically on system boot")
         
     except PermissionError as e:
-        print(f"ERROR: Permission denied - {e}")
-        print("Try running with appropriate privileges")
+        logger.error(f"Permission denied - {e}")
+        logger.error("Try running with appropriate privileges")
         sys.exit(1)
     except Exception as e:
-        print(f"ERROR: Failed to disable auto-start - {e}")
+        logger.error(f"Failed to disable auto-start - {e}")
         sys.exit(1)
 
 
@@ -210,7 +255,7 @@ def cmd_config(args: argparse.Namespace) -> None:
         config_manager.show_config()
     elif args.config_action == "path":
         config_path = config_manager.ensure_config_exists()
-        print(config_path)
+        logger.info(str(config_path))
     elif args.config_action == "reset":
         config_manager.reset_config()
     elif args.config_action == "validate":
@@ -219,13 +264,13 @@ def cmd_config(args: argparse.Namespace) -> None:
     else:
         # Default: show path and basic help
         config_path = config_manager.ensure_config_exists()
-        print(f"Configuration file: {config_path}\n")
-        print("Available commands:")
-        print("  whisper-typer config edit     - Edit configuration in your default editor")
-        print("  whisper-typer config show     - Display current configuration")
-        print("  whisper-typer config path     - Show configuration file path")
-        print("  whisper-typer config reset    - Reset to default configuration")
-        print("  whisper-typer config validate - Validate configuration file")
+        logger.info(f"Configuration file: {config_path}")
+        logger.info("Available commands:")
+        logger.info("  whisper-typer config edit     - Edit configuration in your default editor")
+        logger.info("  whisper-typer config show     - Display current configuration")
+        logger.info("  whisper-typer config path     - Show configuration file path")
+        logger.info("  whisper-typer config reset    - Reset to default configuration")
+        logger.info("  whisper-typer config validate - Validate configuration file")
 
 
 def main() -> None:

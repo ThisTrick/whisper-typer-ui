@@ -1,10 +1,14 @@
 """Audio recorder module for Whisper Typer UI."""
 
+import logging
 from dataclasses import dataclass
 import numpy as np
 import sounddevice as sd
 
 from utils import MicrophoneError
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -64,7 +68,7 @@ class AudioRecorder:
             status: Stream status
         """
         if status:
-            print(f"Audio stream status: {status}")
+            logger.warning(f"Audio stream status: {status}")
         # Copy audio data to buffer
         self._recording.append(indata.copy())
     

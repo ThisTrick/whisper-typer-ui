@@ -1,12 +1,15 @@
 """UI overlay module for Whisper Typer UI."""
 
+import logging
 import tkinter as tk
-from pathlib import Path
 from typing import Callable
 
-from PIL import Image
+from PIL import Image, ImageTk
 
 from utils import IconType
+
+
+logger = logging.getLogger(__name__)
 
 
 class UIOverlay:
@@ -149,13 +152,13 @@ class UIOverlay:
         self.current_icon = icon_type
         
         # Load icon image
-        icon_path = Path(icon_type.value)
+        icon_path = icon_type.path
         if not icon_path.exists():
-            print(f"Warning: Icon file not found: {icon_path}")
+            logger.warning(f"Icon file not found: {icon_path}")
             return
         
         try:
-            image = Image.open(str(icon_path))  # Convert Path to string
+            image = Image.open(icon_path).convert("RGBA")
             # Resize to fit inside circle - use smaller size for better proportions
             icon_size = int(self.size * 0.35)  # 35% of window size instead of 50%
             # Use LANCZOS for high-quality resampling (fallback to BICUBIC if not available)
@@ -168,14 +171,8 @@ class UIOverlay:
             # Store original image for rotation
             self._original_image = image.copy()
             
-            # Convert to PNG in memory and use tkinter's PhotoImage
-            # This avoids PIL ImageTk threading issues
-            import io
-            buffer = io.BytesIO()
-            image.save(buffer, format='PNG')
-            buffer.seek(0)
-            
-            self._photo_image = tk.PhotoImage(data=buffer.getvalue())
+            # Use ImageTk for reliable PhotoImage creation
+            self._photo_image = ImageTk.PhotoImage(image)
             
             # Remove old icon if exists
             if self.icon_id:
@@ -188,7 +185,7 @@ class UIOverlay:
                 image=self._photo_image
             )
         except Exception as e:
-            print(f"Error loading icon {icon_path}: {e}")
+            logger.error(f"Error loading icon {icon_path}: {e}")
             import traceback
             traceback.print_exc()
     
@@ -254,21 +251,11 @@ class UIOverlay:
             try:
                 # Rotate image
                 rotated = self._original_image.rotate(-self._rotation_angle, expand=False)
-                
-                # Convert to PNG in memory
-                import io
-                buffer = io.BytesIO()
-                rotated.save(buffer, format='PNG')
-                buffer.seek(0)
-                
-                # Update PhotoImage
-                self._photo_image = tk.PhotoImage(data=buffer.getvalue())
-                
-                # Update canvas
+                self._photo_image = ImageTk.PhotoImage(rotated)
                 if self.icon_id:
                     self.canvas.itemconfig(self.icon_id, image=self._photo_image)
             except Exception as e:
-                print(f"Error rotating icon: {e}")
+                logger.error(f"Error rotating icon: {e}")
         
         # Schedule next rotation (30ms = ~33 FPS for smooth rotation)
         self._rotation_job = self.window.after(30, self._rotate)

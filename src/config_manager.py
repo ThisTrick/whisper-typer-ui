@@ -1,5 +1,6 @@
 """Configuration management utilities for whisper-typer CLI."""
 
+import logging
 import os
 import shutil
 import subprocess
@@ -7,6 +8,9 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_config_dir() -> Path:
@@ -78,29 +82,29 @@ def open_config_in_editor() -> None:
                 break
     
     if not editor:
-        print(f"No editor found. Please edit manually: {config_path}")
+        logger.warning(f"No editor found. Please edit manually: {config_path}")
         return
     
     try:
         subprocess.run([editor, str(config_path)], check=True)
     except subprocess.CalledProcessError:
-        print(f"Failed to open editor. Please edit manually: {config_path}")
+        logger.error(f"Failed to open editor. Please edit manually: {config_path}")
     except FileNotFoundError:
-        print(f"Editor '{editor}' not found. Please edit manually: {config_path}")
+        logger.error(f"Editor '{editor}' not found. Please edit manually: {config_path}")
 
 
 def show_config() -> None:
     """Display current configuration."""
     config_path = ensure_config_exists()
     
-    print(f"Configuration file: {config_path}\n")
+    logger.info(f"Configuration file: {config_path}")
     
     try:
         with open(config_path, 'r') as f:
             content = f.read()
-        print(content)
+        logger.info(content)
     except Exception as e:
-        print(f"Error reading config: {e}")
+        logger.error(f"Error reading config: {e}")
 
 
 def reset_config() -> None:
@@ -114,8 +118,8 @@ def reset_config() -> None:
     # Create new default config
     ensure_config_exists()
     
-    print(f"✓ Configuration reset to defaults")
-    print(f"  Location: {config_path}")
+    logger.info("✓ Configuration reset to defaults")
+    logger.info(f"  Location: {config_path}")
 
 
 def validate_config() -> bool:
@@ -132,7 +136,7 @@ def validate_config() -> bool:
             config = yaml.safe_load(f)
         
         if not isinstance(config, dict):
-            print("ERROR: Config file must contain a YAML dictionary")
+            logger.error("Config file must contain a YAML dictionary")
             return False
         
         # Check required keys
@@ -140,21 +144,21 @@ def validate_config() -> bool:
         missing_keys = [k for k in required_keys if k not in config]
         
         if missing_keys:
-            print(f"ERROR: Missing required keys: {', '.join(missing_keys)}")
+            logger.error(f"Missing required keys: {', '.join(missing_keys)}")
             return False
         
         # Validate model_size
         valid_models = ["tiny", "base", "small", "medium", "large-v3"]
         if config["model_size"] not in valid_models:
-            print(f"ERROR: Invalid model_size '{config['model_size']}'. Must be one of: {', '.join(valid_models)}")
+            logger.error(f"Invalid model_size '{config['model_size']}'. Must be one of: {', '.join(valid_models)}")
             return False
         
-        print("✓ Configuration is valid")
+        logger.info("✓ Configuration is valid")
         return True
         
     except yaml.YAMLError as e:
-        print(f"ERROR: Invalid YAML syntax: {e}")
+        logger.error(f"Invalid YAML syntax: {e}")
         return False
     except Exception as e:
-        print(f"ERROR: Failed to validate config: {e}")
+        logger.error(f"Failed to validate config: {e}")
         return False

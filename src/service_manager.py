@@ -2,10 +2,11 @@
 
 import os
 import platform
+import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
 
 PlatformType = Literal["linux", "darwin", "windows"]
@@ -206,11 +207,30 @@ WantedBy=default.target
             return False
     
     # Windows (Task Scheduler) implementation
+
+    def _find_pythonw(self) -> Optional[str]:
+        """Locate pythonw executable for background execution on Windows."""
+        candidates = [
+            shutil.which("pythonw.exe"),
+            shutil.which("pythonw"),
+            str(Path(sys.executable).with_name("pythonw.exe")),
+        ]
+        for candidate in candidates:
+            if candidate and os.path.exists(candidate):
+                return candidate
+        return None
+
+    def _get_windows_daemon_command(self) -> str:
+        """Construct the Task Scheduler command line for daemon start."""
+        pythonw_path = self._find_pythonw()
+        if pythonw_path:
+            return f'"{pythonw_path}" -m src.daemon'
+        whisper_typer_cmd = self._get_command_path()
+        return f'"{whisper_typer_cmd}" daemon'
     
     def _enable_task_scheduler(self) -> None:
         """Create Task Scheduler task for auto-start."""
-        # Get path to whisper-typer command
-        whisper_typer_cmd = self._get_command_path()
+        command_line = self._get_windows_daemon_command()
         
         # Create task using schtasks command
         task_name = "WhisperTyper"
@@ -229,7 +249,7 @@ WantedBy=default.target
             subprocess.run([
                 "schtasks", "/create",
                 "/tn", task_name,
-                "/tr", f'"{whisper_typer_cmd}" daemon',
+                "/tr", command_line,
                 "/sc", "onlogon",
                 "/rl", "limited",
                 "/f"

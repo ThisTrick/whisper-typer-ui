@@ -1,5 +1,6 @@
 """Transcription module using faster-whisper."""
 
+import logging
 import time
 
 import numpy as np
@@ -7,6 +8,9 @@ from faster_whisper import WhisperModel
 
 from audio_recorder import AudioChunk
 from utils import TranscriptionResult, TranscriptionError, ModelLoadError, ChunkTranscriptionResult
+
+
+logger = logging.getLogger(__name__)
 
 
 class Transcriber:
@@ -43,13 +47,13 @@ class Transcriber:
         
         # Load model
         try:
-            print(f"Loading whisper model '{model_size}' ({compute_type} on {device})...")
+            logger.info(f"Loading whisper model '{model_size}' ({compute_type} on {device})...")
             self.model = WhisperModel(
                 model_size,
                 device=device,
                 compute_type=compute_type
             )
-            print(f"Model loaded successfully")
+            logger.info("Model loaded successfully")
         except Exception as e:
             raise ModelLoadError(model_size, device, str(e))
     
@@ -71,7 +75,7 @@ class Transcriber:
         try:
             start_time = time.time()
             
-            print(f"Starting transcription of {audio_length:.2f}s audio...")
+            logger.info(f"Starting transcription of {audio_length:.2f}s audio...")
             
             # Transcribe with language hint
             # Note: This is the CPU-intensive blocking operation
@@ -84,7 +88,7 @@ class Transcriber:
                 without_timestamps=True,  # Faster processing
             )
             
-            print(f"Transcription model finished, collecting segments...")
+            logger.info("Transcription model finished, collecting segments...")
             
             # Force completion and collect text
             segments = list(segments)
@@ -100,12 +104,12 @@ class Transcriber:
                 processing_time=processing_time
             )
             
-            print(f"Transcription completed in {processing_time:.2f}s")
-            print(f"Detected language: {info.language} (confidence: {info.language_probability:.2f})")
+            logger.info(f"Transcription completed in {processing_time:.2f}s")
+            logger.info(f"Detected language: {info.language} (confidence: {info.language_probability:.2f})")
             if result.text:
-                print(f"Transcribed text: {result.text}")
+                logger.info(f"Transcribed text: {result.text}")
             else:
-                print("No speech detected (empty result)")
+                logger.info("No speech detected (empty result)")
             
             return result
             

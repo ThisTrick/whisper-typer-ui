@@ -129,7 +129,8 @@ That's it! 🎉
 
 ## ⚙️ Configuration
 
-The configuration file is automatically created at `~/.whisper-typer/config.yaml` on first run.
+The configuration file is automatically created at `~/.whisper-typer/config.yaml` on first run.  
+Set the `WHISPER_TYPER_CONFIG` environment variable if you need to store the config elsewhere (portable installs, multiple profiles, CI tests, etc.).
 
 **Edit configuration**:
 ```bash
@@ -290,6 +291,15 @@ whisper-typer enable
 - Try running Command Prompt as Administrator
 </details>
 
+<details>
+<summary><b>Windows console window appears</b></summary>
+
+- `whisper-typer start` now launches the daemon via `pythonw`, so there is no background PowerShell/Terminal window
+- If you previously enabled auto-start, run `whisper-typer disable && whisper-typer enable` to refresh the hidden Task Scheduler entry
+- If you run `python src/whisper-typer-ui.py` manually, the app auto-detaches from the console, but using `whisper-typer start` keeps things tidy
+- When creating your own Task Scheduler task, point it to `whisper-typer daemon` or use `whisper-typer enable` to create a hidden task automatically
+</details>
+
 ---
 
 ### Application Issues
@@ -331,6 +341,14 @@ sudo apt install xclip
 echo "test" | xclip -selection clipboard
 xclip -selection clipboard -o
 ```
+</details>
+
+<details>
+<summary><b>Windows inserts incorrect characters</b></summary>
+
+- Version 0.1.1+ replaces the clipboard using native Win32 APIs so the layout no longer matters
+- If text still looks wrong, make sure you are not forcing the fallback by clearing the clipboard during paste
+- As a last resort, disable third-party clipboard helpers and restart `whisper-typer start`
 </details>
 
 <details>
