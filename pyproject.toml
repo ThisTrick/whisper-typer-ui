@@ -20,5 +20,10 @@ whisper-typer = "src.cli:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+include = [
+    "src/assets/*.png",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

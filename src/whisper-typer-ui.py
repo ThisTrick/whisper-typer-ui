@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Whisper Typer UI - Cross-platform voice dictation application."""
 
+import logging
 import sys
 import threading
 import time
@@ -19,22 +20,26 @@ from text_inserter import TextInserter
 from streaming_session import StreamingSession
 
 
+logger = logging.getLogger(__name__)
+
+
 class WhisperTyperApp:
     """Main application controller."""
     
     def __init__(self):
         """Initialize application."""
-        print("Initializing Whisper Typer UI...")
+        logger.info("Initializing Whisper Typer UI...")
         
         # Load configuration
         try:
-            self.config = AppConfig("config.yaml")
-            print(f"Loaded configuration:")
-            print(f"  - Language: {self.config.primary_language}")
-            print(f"  - Hotkey: {self.config.hotkey_combo}")
-            print(f"  - Model: {self.config.model_size} ({self.config.compute_type})")
+            self.config = AppConfig()
+            logger.info("Loaded configuration:")
+            logger.info(f"  - Config file: {self.config.config_path}")
+            logger.info(f"  - Language: {self.config.primary_language}")
+            logger.info(f"  - Hotkey: {self.config.hotkey_combo}")
+            logger.info(f"  - Model: {self.config.model_size} ({self.config.compute_type})")
         except ConfigError as e:
-            print(f"Configuration error: {e}")
+            logger.error(f"Configuration error: {e}")
             sys.exit(1)
         
         # Initialize components
@@ -53,9 +58,9 @@ class WhisperTyperApp:
         # Initialize audio recorder
         try:
             self.recorder = AudioRecorder()
-            print("Microphone initialized successfully")
+            logger.info("Microphone initialized successfully")
         except MicrophoneError as e:
-            print(f"Microphone error: {e}")
+            logger.error(f"Microphone error: {e}")
             sys.exit(1)
         
         # Initialize transcriber
@@ -69,7 +74,7 @@ class WhisperTyperApp:
                 vad_filter=self.config.vad_filter
             )
         except ModelLoadError as e:
-            print(f"Model loading error: {e}")
+            logger.error(f"Model loading error: {e}")
             sys.exit(1)
         
         # Initialize text inserter
@@ -79,16 +84,16 @@ class WhisperTyperApp:
         try:
             self.hotkey_mgr = HotkeyManager(self.config.hotkey_combo)
             self.hotkey_mgr.register(self.on_hotkey_press)
-            print(f"Hotkey registered: {self.config.hotkey_combo}")
+            logger.info(f"Hotkey registered: {self.config.hotkey_combo}")
         except ValueError as e:
-            print(f"Hotkey registration error: {e}")
+            logger.error(f"Hotkey registration error: {e}")
             sys.exit(1)
         
         # Set click callback for UI
         self.ui.set_click_callback(self.on_ui_click)
         
-        print("\nApplication ready!")
-        print(f"Press {self.config.hotkey_combo} to start recording")
+        logger.info("Application ready!")
+        logger.info(f"Press {self.config.hotkey_combo} to start recording")
     
     def on_hotkey_press(self) -> None:
         """Handle hotkey press event."""
@@ -111,7 +116,7 @@ class WhisperTyperApp:
     def start_streaming_recording(self) -> None:
         """Start streaming recording session with parallel transcription."""
         try:
-            print("\n[STREAMING RECORDING STARTED]")
+            logger.info("[STREAMING RECORDING STARTED]")
             self.session_state = SessionState.RECORDING
             self.is_processing = True
             
@@ -131,8 +136,8 @@ class WhisperTyperApp:
             self.ui.set_icon(IconType.MICROPHONE)
             self.ui.start_pulsation()
             
-            print(f"Recording... (Press {self.config.hotkey_combo} or click to stop)")
-            print(f"Chunks will be transcribed every {self.config.chunk_duration} seconds")
+            logger.info(f"Recording... (Press {self.config.hotkey_combo} or click to stop)")
+            logger.info(f"Chunks will be transcribed every {self.config.chunk_duration} seconds")
             
             # Start chunk extraction loop in background thread
             chunk_thread = threading.Thread(
@@ -142,7 +147,7 @@ class WhisperTyperApp:
             chunk_thread.start()
             
         except MicrophoneError as e:
-            print(f"Error starting recording: {e}")
+            logger.error(f"Error starting recording: {e}")
             self.ui.show_error(f"Microphone error: {e.error_code}", duration=2.5)
             self.session_state = SessionState.ERROR
             self.is_processing = False
@@ -161,14 +166,14 @@ class WhisperTyperApp:
                 # Extract chunk from recorder
                 chunk = self.recorder.extract_chunk()
                 
-                print(f"[CHUNK {chunk.sequence}] Extracted {len(chunk.data) / self.recorder.sample_rate:.2f}s audio, submitting for transcription")
+                logger.info(f"[CHUNK {chunk.sequence}] Extracted {len(chunk.data) / self.recorder.sample_rate:.2f}s audio, submitting for transcription")
                 
                 # Submit to streaming session
                 if self.streaming_session:
                     self.streaming_session.submit_chunk(chunk)
                     
         except Exception as e:
-            print(f"Error in chunk extraction loop: {e}")
+            logger.error(f"Error in chunk extraction loop: {e}")
             self.on_streaming_error(e)
     
     def insert_text_safe(self, text: str) -> None:
@@ -198,7 +203,7 @@ class WhisperTyperApp:
     
     def stop_streaming_recording(self) -> None:
         """Stop streaming recording and finalize transcription."""
-        print("[STREAMING RECORDING STOPPED]")
+        logger.info("[STREAMING RECORDING STOPPED]")
         
         # Change state immediately to stop chunk extraction loop
         self.session_state = SessionState.TRANSCRIBING
@@ -216,7 +221,7 @@ class WhisperTyperApp:
         self.ui.set_border_color('#4488ff')  # Bright blue
         self.ui.start_rotation()
         
-        print(f"[FINAL CHUNK {final_chunk.sequence}] Extracted {len(final_chunk.data) / self.recorder.sample_rate:.2f}s audio")
+        logger.info(f"[FINAL CHUNK {final_chunk.sequence}] Extracted {len(final_chunk.data) / self.recorder.sample_rate:.2f}s audio")
         
         # Submit final chunk if it has audio
         if self.streaming_session and len(final_chunk.data) > 0:
@@ -232,7 +237,7 @@ class WhisperTyperApp:
     def finalize_streaming_session(self) -> None:
         """Wait for all chunks to complete and insert remaining text."""
         try:
-            print("[FINALIZING STREAMING SESSION]")
+            logger.info("[FINALIZING STREAMING SESSION]")
             
             if self.streaming_session:
                 # This blocks until all chunks complete
@@ -240,7 +245,7 @@ class WhisperTyperApp:
                 self.streaming_session = None
             
             # Wait for all pending text insertions to complete
-            print("[FINALIZE] Waiting for pending text insertions...")
+            logger.info("[FINALIZE] Waiting for pending text insertions...")
             max_wait = 50  # Wait up to 5 seconds (50 * 100ms)
             wait_count = 0
             while wait_count < max_wait:
@@ -248,23 +253,23 @@ class WhisperTyperApp:
                     if self._pending_insertions == 0:
                         break
                     pending = self._pending_insertions
-                print(f"[FINALIZE] {pending} insertions pending, waiting...")
+                logger.info(f"[FINALIZE] {pending} insertions pending, waiting...")
                 time.sleep(0.1)
                 wait_count += 1
             
             with self._insertion_lock:
                 if self._pending_insertions > 0:
-                    print(f"[FINALIZE] WARNING: {self._pending_insertions} insertions still pending after timeout")
+                    logger.warning(f"[FINALIZE] WARNING: {self._pending_insertions} insertions still pending after timeout")
                 else:
-                    print("[FINALIZE] All text insertions completed")
+                    logger.info("[FINALIZE] All text insertions completed")
             
-            print("[STREAMING SESSION COMPLETED]")
+            logger.info("[STREAMING SESSION COMPLETED]")
             
             # Schedule UI hide after short delay
             self.ui.window.after(300, self.ui.hide)
             
         except Exception as e:
-            print(f"Error finalizing streaming session: {e}")
+            logger.error(f"Error finalizing streaming session: {e}")
             self.ui.show_error("Finalization failed", duration=2.5)
         finally:
             # Stop rotation
@@ -272,11 +277,11 @@ class WhisperTyperApp:
             # Reset state
             self.session_state = SessionState.IDLE
             self.is_processing = False
-            print("Ready for next recording\n")
+            logger.info("Ready for next recording")
     
     def on_streaming_error(self, error: Exception) -> None:
         """Handle errors during streaming transcription."""
-        print(f"Streaming error: {error}")
+        logger.error(f"Streaming error: {error}")
         
         # Stop UI animations
         self.ui.stop_rotation()
@@ -293,14 +298,14 @@ class WhisperTyperApp:
         # Schedule state reset
         def reset_to_idle():
             self.session_state = SessionState.IDLE
-            print("Ready for next recording\n")
+            logger.info("Ready for next recording")
         
         self.ui.window.after(2500, reset_to_idle)
     
     def start_recording(self) -> None:
         """Start recording session."""
         try:
-            print("\n[RECORDING STARTED]")
+            logger.info("[RECORDING STARTED]")
             self.session_state = SessionState.RECORDING
             
             # Start audio recording
@@ -312,16 +317,16 @@ class WhisperTyperApp:
             self.ui.set_icon(IconType.MICROPHONE)
             self.ui.start_pulsation()
             
-            print(f"Recording... (Press {self.config.hotkey_combo} or click to stop)")
+            logger.info(f"Recording... (Press {self.config.hotkey_combo} or click to stop)")
             
         except MicrophoneError as e:
-            print(f"Error starting recording: {e}")
+            logger.error(f"Error starting recording: {e}")
             self.ui.show_error(f"Microphone error: {e.error_code}", duration=2.5)
             self.session_state = SessionState.ERROR
     
     def stop_recording(self) -> None:
         """Stop recording session."""
-        print("[RECORDING STOPPED]")
+        logger.info("[RECORDING STOPPED]")
         
         # Stop audio recording
         self.audio_buffer = self.recorder.stop_recording()
@@ -333,7 +338,7 @@ class WhisperTyperApp:
         self.session_state = SessionState.TRANSCRIBING
         
         audio_length = len(self.audio_buffer) / self.recorder.sample_rate
-        print(f"Recorded {audio_length:.2f} seconds of audio")
+        logger.info(f"Recorded {audio_length:.2f} seconds of audio")
         
         # Change UI to processing icon (without pulsation - static border)
         self.ui.set_icon(IconType.PROCESSING)
@@ -351,13 +356,13 @@ class WhisperTyperApp:
         """Process transcription and insert text."""
         try:
             # Transcribe audio
-            print("[TRANSCRIPTION STARTED]")
+            logger.info("[TRANSCRIPTION STARTED]")
             
             # Force UI update before starting heavy computation
             self.ui.window.update_idletasks()
             
             result = self.transcriber.transcribe(self.audio_buffer)
-            print("[TRANSCRIPTION COMPLETED]")
+            logger.info("[TRANSCRIPTION COMPLETED]")
             
             # Force UI update after transcription
             self.ui.window.update_idletasks()
@@ -367,29 +372,29 @@ class WhisperTyperApp:
             
             # Insert text if not empty
             if result.text:
-                print("[TEXT INSERTION STARTED]")
+                logger.info("[TEXT INSERTION STARTED]")
                 self.session_state = SessionState.INSERTING
                 
                 # Type text in worker thread (it's already in worker thread)
                 self.text_inserter.type_text(result.text)
                 
-                print("[TEXT INSERTION COMPLETED]")
+                logger.info("[TEXT INSERTION COMPLETED]")
                 self.session_state = SessionState.COMPLETED
                 
                 # Schedule UI hide after short delay
                 self.ui.window.after(300, self.ui.hide)
             else:
-                print("Empty transcription - no text to insert")
+                logger.info("Empty transcription - no text to insert")
                 self.session_state = SessionState.COMPLETED
                 self.ui.hide()
             
         except TranscriptionError as e:
-            print(f"Transcription error: {e}")
+            logger.error(f"Transcription error: {e}")
             self.ui.stop_rotation()
             self.ui.show_error("Transcription failed", duration=2.5)
             self.session_state = SessionState.ERROR
         except Exception as e:
-            print(f"Unexpected error: {e}")
+            logger.error(f"Unexpected error: {e}")
             self.ui.stop_rotation()
             self.ui.show_error("Error occurred", duration=2.5)
             self.session_state = SessionState.ERROR
@@ -400,7 +405,7 @@ class WhisperTyperApp:
             self.audio_buffer = None
             # Return to idle state
             self.session_state = SessionState.IDLE
-            print("Ready for next recording\n")
+            logger.info("Ready for next recording")
     
     def run(self) -> None:
         """Run the application."""
@@ -412,7 +417,7 @@ class WhisperTyperApp:
         try:
             self.ui.run()
         except KeyboardInterrupt:
-            print("\nShutting down...")
+            logger.info("Shutting down...")
             self.hotkey_mgr.stop()
             sys.exit(0)
 

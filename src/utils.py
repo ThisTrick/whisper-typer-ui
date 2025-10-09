@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -81,11 +82,31 @@ class SessionState(Enum):
     ERROR = "error"                  # Any failure occurred
 
 
+_DEFAULT_ASSET_DIR = Path(__file__).resolve().parent / "assets"
+_ALT_ASSET_DIR = Path(__file__).resolve().parent.parent / "assets"
+
+
+def resolve_asset_path(name: str) -> Path:
+    """Resolve an asset name to an on-disk path, supporting editable installs."""
+    for base in (_DEFAULT_ASSET_DIR, _ALT_ASSET_DIR):
+        candidate = base / name
+        if candidate.exists():
+            return candidate
+    # Return the default location even if missing so callers can emit a warning.
+    return _DEFAULT_ASSET_DIR / name
+
+
 class IconType(Enum):
     """UI overlay icon types."""
-    MICROPHONE = "assets/microphone.png"
-    PROCESSING = "assets/processing.png"
-    ERROR = "assets/error.png"
+
+    MICROPHONE = "microphone.png"
+    PROCESSING = "processing.png"
+    ERROR = "error.png"
+
+    @property
+    def path(self) -> Path:
+        """Resolved filesystem path for the icon asset."""
+        return resolve_asset_path(self.value)
 
 
 @dataclass

@@ -1,10 +1,14 @@
 """Configuration loader for Whisper Typer UI."""
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigError(Exception):
@@ -44,8 +48,12 @@ class AppConfig:
             ConfigError: If YAML is invalid or required keys are malformed
         """
         if config_path is None:
-            # Use user config directory
-            config_path = Path.home() / ".whisper-typer" / "config.yaml"
+            # Allow overriding config path via environment variable for testing/dev
+            env_path = os.environ.get("WHISPER_TYPER_CONFIG")
+            if env_path:
+                config_path = Path(env_path).expanduser()
+            else:
+                config_path = Path.home() / ".whisper-typer" / "config.yaml"
         
         self.config_path = Path(config_path)
         self._config: dict[str, Any] = {}
@@ -157,7 +165,7 @@ class AppConfig:
         # Validate chunk_duration
         chunk_dur = self.chunk_duration
         if not isinstance(chunk_dur, int) or chunk_dur <= 0:
-            print(f"WARNING: Invalid chunk_duration {chunk_dur}, using default 30")
+            logger.warning(f"Invalid chunk_duration {chunk_dur}, using default 30")
             self._config["chunk_duration"] = 30
         else:
-            print(f"Using chunk_duration: {chunk_dur}s")
+            logger.info(f"Using chunk_duration: {chunk_dur}s")
