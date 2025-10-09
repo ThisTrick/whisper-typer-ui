@@ -294,8 +294,9 @@ whisper-typer enable
 <details>
 <summary><b>Windows console window appears</b></summary>
 
-- `whisper-typer start` now launches the daemon with a hidden window; upgrade if you still see a console
-- If you run `python src/whisper-typer-ui.py` manually, Windows will open a console by design; prefer `whisper-typer start`
+- `whisper-typer start` now launches the daemon via `pythonw`, so there is no background PowerShell/Terminal window
+- If you previously enabled auto-start, run `whisper-typer disable && whisper-typer enable` to refresh the hidden Task Scheduler entry
+- If you run `python src/whisper-typer-ui.py` manually, the app auto-detaches from the console, but using `whisper-typer start` keeps things tidy
 - When creating your own Task Scheduler task, point it to `whisper-typer daemon` or use `whisper-typer enable` to create a hidden task automatically
 </details>
 

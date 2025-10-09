@@ -7,12 +7,40 @@ import signal
 import subprocess
 import sys
 import time
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
+from typing import List, Optional
+
+import shutil
 
 from src import process_lock, daemon, service_manager, config_manager
 
 
 logger = logging.getLogger(__name__)
+
+
+def _find_pythonw_executable() -> Optional[str]:
+    """Return pythonw.exe path when available (Windows only)."""
+    candidates = [
+        shutil.which("pythonw.exe"),
+        shutil.which("pythonw"),
+        str(Path(sys.executable).with_name("pythonw.exe")),
+    ]
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            return candidate
+    return None
+
+
+def _build_windows_launch_cmd(default_cli: Optional[str]) -> List[str]:
+    """Build a background launch command for Windows that hides the console."""
+    pythonw_path = _find_pythonw_executable()
+    if pythonw_path:
+        return [pythonw_path, "-m", "src.daemon"]
+    if default_cli:
+        return [default_cli, "daemon"]
+    # Fall back to python executable if everything else fails
+    return [sys.executable, "-m", "src.cli", "daemon"]
 
 
 def get_version() -> str:
@@ -33,29 +61,40 @@ def cmd_start() -> None:
     
     # Launch daemon in background
     try:
-        # Get the whisper-typer executable path
-        import shutil
+        # Get the whisper-typer executable path if available (installed via uv/pip)
         whisper_typer_cmd = shutil.which("whisper-typer")
-        if not whisper_typer_cmd:
-            logger.error("whisper-typer command not found in PATH")
-            sys.exit(1)
         
         # Start daemon as detached process
         if os.name == 'nt':  # Windows
-            creationflags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+            launch_cmd = _build_windows_launch_cmd(whisper_typer_cmd)
+            creationflags = getattr(subprocess, "DETACHED_PROCESS", 0) | subprocess.CREATE_NEW_PROCESS_GROUP
             creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            startupinfo = subprocess.STARTUPINFO()  # type: ignore[attr-defined]
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore[attr-defined]
+            startupinfo.wShowWindow = 0  # type: ignore[attr-defined]
+            env = os.environ.copy()
+            env.setdefault("WHISPER_TYPER_HIDE_CONSOLE", "1")
+            env.setdefault("PYTHONUNBUFFERED", "1")
             subprocess.Popen(
-                [whisper_typer_cmd, "daemon"],
+                launch_cmd,
                 creationflags=creationflags,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                close_fds=True,
+                startupinfo=startupinfo,
+                env=env,
             )
         else:  # Unix-like (Linux, macOS)
+            if not whisper_typer_cmd:
+                logger.error("whisper-typer command not found in PATH")
+                sys.exit(1)
             subprocess.Popen(
                 [whisper_typer_cmd, "daemon"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                start_new_session=True
+                start_new_session=True,
+                close_fds=True,
             )
         
         # Give it a moment to start
