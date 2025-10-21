@@ -9,6 +9,8 @@ from typing import Optional
 
 import yaml
 
+from .config import AppConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,17 +43,8 @@ def ensure_config_exists() -> Path:
     config_dir.mkdir(parents=True, exist_ok=True)
     
     # Create default config
-    default_config = {
-        "primary_language": "en",
-        "hotkey": "<ctrl>+<alt>+<space>",
-        "model_size": "tiny",
-        "compute_type": "int8",
-        "device": "cpu",
-        "beam_size": 1,
-        "vad_filter": True,
-        "chunk_duration": 30
-    }
-    
+    default_config = AppConfig.DEFAULTS.copy()
+
     with open(config_path, 'w') as f:
         yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
     
