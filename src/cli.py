@@ -32,15 +32,57 @@ def _find_pythonw_executable() -> Optional[str]:
     return None
 
 
+def _write_vbs_wrapper(target_cmd: List[str]) -> Optional[List[str]]:
+    """Create a VBScript wrapper that launches the target command hidden."""
+
+    wscript = shutil.which("wscript.exe") or shutil.which("wscript")
+    if not wscript:
+        return None
+
+    scripts_dir = Path.home() / ".whisper-typer" / "windows"
+    scripts_dir.mkdir(parents=True, exist_ok=True)
+    script_path = scripts_dir / "launch-daemon-hidden.vbs"
+
+    cmd_line = subprocess.list2cmdline(target_cmd)
+    escaped_cmd_line = cmd_line.replace('"', '""')
+    lines = [
+        'Set shell = CreateObject("Wscript.Shell")',
+        'Set env = shell.Environment("Process")',
+        'env("WHISPER_TYPER_HIDE_CONSOLE") = "1"',
+        'env("PYTHONUNBUFFERED") = "1"',
+        f'shell.Run "cmd /c ""{escaped_cmd_line}""", 0, False',
+    ]
+    script_contents = "\r\n".join(lines) + "\r\n"
+
+    try:
+        if not script_path.exists() or script_path.read_text(encoding="utf-8") != script_contents:
+            script_path.write_text(script_contents, encoding="utf-8")
+    except OSError:
+        return None
+
+    return [wscript, str(script_path)]
+
+
 def _build_windows_launch_cmd(default_cli: Optional[str]) -> List[str]:
     """Build a background launch command for Windows that hides the console."""
     pythonw_path = _find_pythonw_executable()
     if pythonw_path:
         return [pythonw_path, "-m", "src.daemon"]
+
+    fallback_targets: List[List[str]] = []
     if default_cli:
-        return [default_cli, "daemon"]
-    # Fall back to python executable if everything else fails
-    return [sys.executable, "-m", "src.cli", "daemon"]
+        fallback_targets.append([default_cli, "daemon"])
+    fallback_targets.append([sys.executable, "-m", "src.cli", "daemon"])
+
+    for target in fallback_targets:
+        wrapper_cmd = _write_vbs_wrapper(target)
+        if wrapper_cmd:
+            return wrapper_cmd
+
+    raise RuntimeError(
+        "Unable to locate a windowless Python interpreter. Install pythonw.exe "
+        "or ensure Windows Script Host is available to run the service hidden."
+    )
 
 
 def get_version() -> str:
@@ -66,7 +108,11 @@ def cmd_start() -> None:
         
         # Start daemon as detached process
         if os.name == 'nt':  # Windows
-            launch_cmd = _build_windows_launch_cmd(whisper_typer_cmd)
+            try:
+                launch_cmd = _build_windows_launch_cmd(whisper_typer_cmd)
+            except RuntimeError as err:
+                logger.error(str(err))
+                sys.exit(1)
             creationflags = getattr(subprocess, "DETACHED_PROCESS", 0) | subprocess.CREATE_NEW_PROCESS_GROUP
             creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
             startupinfo = subprocess.STARTUPINFO()  # type: ignore[attr-defined]
