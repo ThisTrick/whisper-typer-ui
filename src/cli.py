@@ -21,14 +21,31 @@ logger = logging.getLogger(__name__)
 
 def _find_pythonw_executable() -> Optional[str]:
     """Return pythonw.exe path when available (Windows only)."""
+
+    def _supports_cli_import(pythonw_path: str) -> bool:
+        try:
+            subprocess.run(
+                [pythonw_path, "-c", "import src.cli"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+            logger.debug("pythonw candidate %s failed import check", pythonw_path)
+            return False
+        return True
+
     candidates = [
+        str(Path(sys.executable).with_name("pythonw.exe")),
         shutil.which("pythonw.exe"),
         shutil.which("pythonw"),
-        str(Path(sys.executable).with_name("pythonw.exe")),
     ]
     for candidate in candidates:
         if candidate and os.path.exists(candidate):
-            return candidate
+            if _supports_cli_import(candidate):
+                return candidate
+            logger.debug("Skipping pythonw candidate %s after failed validation", candidate)
     return None
 
 
@@ -37,10 +54,8 @@ def _build_windows_launch_cmd(default_cli: Optional[str]) -> List[str]:
     pythonw_path = _find_pythonw_executable()
     if pythonw_path:
         return [pythonw_path, "-m", "src.daemon"]
-    if default_cli:
-        return [default_cli, "daemon"]
-    # Fall back to python executable if everything else fails
-    return [sys.executable, "-m", "src.cli", "daemon"]
+    # Fall back to python executable if pythonw isn't available/valid
+    return [sys.executable, "-m", "src.daemon"]
 
 
 def get_version() -> str:

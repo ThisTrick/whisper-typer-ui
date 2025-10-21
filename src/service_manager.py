@@ -1,5 +1,6 @@
 """Platform-specific service management for auto-start configuration."""
 
+import logging
 import os
 import platform
 import shutil
@@ -10,6 +11,9 @@ from typing import Literal, Optional
 
 
 PlatformType = Literal["linux", "darwin", "windows"]
+
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceManager:
@@ -210,14 +214,30 @@ WantedBy=default.target
 
     def _find_pythonw(self) -> Optional[str]:
         """Locate pythonw executable for background execution on Windows."""
+        def _supports_cli_import(pythonw_path: str) -> bool:
+            try:
+                subprocess.run(
+                    [pythonw_path, "-c", "import src.cli"],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=5,
+                )
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+                logger.debug("pythonw candidate %s failed import check", pythonw_path)
+                return False
+            return True
+
         candidates = [
+            str(Path(sys.executable).with_name("pythonw.exe")),
             shutil.which("pythonw.exe"),
             shutil.which("pythonw"),
-            str(Path(sys.executable).with_name("pythonw.exe")),
         ]
         for candidate in candidates:
             if candidate and os.path.exists(candidate):
-                return candidate
+                if _supports_cli_import(candidate):
+                    return candidate
+                logger.debug("Skipping pythonw candidate %s after failed validation", candidate)
         return None
 
     def _get_windows_daemon_command(self) -> str:
@@ -225,8 +245,7 @@ WantedBy=default.target
         pythonw_path = self._find_pythonw()
         if pythonw_path:
             return f'"{pythonw_path}" -m src.daemon'
-        whisper_typer_cmd = self._get_command_path()
-        return f'"{whisper_typer_cmd}" daemon'
+        return f'"{sys.executable}" -m src.daemon'
     
     def _enable_task_scheduler(self) -> None:
         """Create Task Scheduler task for auto-start."""
