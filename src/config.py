@@ -31,7 +31,7 @@ class AppConfig:
         "device": "cpu",
         "beam_size": 5,
         "vad_filter": True,
-        "chunk_duration": 30
+        "chunk_duration": 3
     }
     
     VALID_MODEL_SIZES = ["tiny", "base", "small", "medium", "large-v3"]
@@ -165,7 +165,24 @@ class AppConfig:
         # Validate chunk_duration
         chunk_dur = self.chunk_duration
         if not isinstance(chunk_dur, int) or chunk_dur <= 0:
-            logger.warning(f"Invalid chunk_duration {chunk_dur}, using default 30")
-            self._config["chunk_duration"] = 30
+            default_dur = self.DEFAULTS["chunk_duration"]
+            logger.warning(
+                "Invalid chunk_duration %s, falling back to default of %ss for"
+                " incremental transcription.",
+                chunk_dur,
+                default_dur,
+            )
+            self._config["chunk_duration"] = default_dur
         else:
-            logger.info(f"Using chunk_duration: {chunk_dur}s")
+            logger.info(
+                "Using chunk_duration: %ss — lower values provide quicker,"
+                " incremental transcription while higher values increase"
+                " latency.",
+                chunk_dur,
+            )
+            if chunk_dur > 10:
+                logger.warning(
+                    "chunk_duration above 10s may delay intermediate"
+                    " transcriptions; consider values between 2-5s for more"
+                    " responsive output."
+                )
