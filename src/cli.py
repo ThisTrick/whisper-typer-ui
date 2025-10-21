@@ -16,6 +16,20 @@ import shutil
 from src import process_lock, daemon, service_manager, config_manager
 
 
+_LOGGING_CONFIGURED = False
+
+
+def _configure_logging() -> None:
+    """Configure root logging once for CLI commands."""
+    global _LOGGING_CONFIGURED
+    if not _LOGGING_CONFIGURED:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+        _LOGGING_CONFIGURED = True
+
+
+_configure_logging()
+
+
 logger = logging.getLogger(__name__)
 
 
