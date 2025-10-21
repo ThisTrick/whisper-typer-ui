@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import sys
 
 
 # ============================================================================
@@ -86,9 +87,14 @@ _DEFAULT_ASSET_DIR = Path(__file__).resolve().parent / "assets"
 _ALT_ASSET_DIR = Path(__file__).resolve().parent.parent / "assets"
 
 
+def _pyinstaller_asset_dir() -> Path:
+    """Return the asset directory used by PyInstaller builds, if available."""
+    return Path(getattr(sys, "_MEIPASS", "")) / "assets"
+
+
 def resolve_asset_path(name: str) -> Path:
     """Resolve an asset name to an on-disk path, supporting editable installs."""
-    for base in (_DEFAULT_ASSET_DIR, _ALT_ASSET_DIR):
+    for base in (_pyinstaller_asset_dir(), _DEFAULT_ASSET_DIR, _ALT_ASSET_DIR):
         candidate = base / name
         if candidate.exists():
             return candidate
