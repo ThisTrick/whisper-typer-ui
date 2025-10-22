@@ -68,6 +68,11 @@ def _build_windows_launch_cmd(default_cli: Optional[str]) -> List[str]:
     pythonw_path = _find_pythonw_executable()
     if pythonw_path:
         return [pythonw_path, "-m", "src.daemon"]
+    if default_cli:
+        # Use the installed whisper-typer CLI if available. The surrounding
+        # caller will still supply CREATE_NO_WINDOW so the spawned process
+        # remains hidden even though the shim normally launches a console.
+        return [default_cli, "daemon"]
     # Fall back to python executable if pythonw isn't available/valid
     return [sys.executable, "-m", "src.daemon"]
 
