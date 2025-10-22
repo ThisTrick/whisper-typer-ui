@@ -7,6 +7,8 @@ from typing import Any
 
 import yaml
 
+from .config_defaults import DEFAULT_CONFIG
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,16 +25,7 @@ class AppConfig:
     """Application configuration loaded from config.yaml."""
     
     # Default values
-    DEFAULTS = {
-        "primary_language": "en",
-        "hotkey": "<ctrl>+<alt>+<space>",
-        "model_size": "tiny",
-        "compute_type": "int8",
-        "device": "cpu",
-        "beam_size": 1,
-        "vad_filter": True,
-        "chunk_duration": 30
-    }
+    DEFAULTS = DEFAULT_CONFIG
     
     VALID_MODEL_SIZES = ["tiny", "base", "small", "medium", "large-v3"]
     VALID_COMPUTE_TYPES = ["int8", "float16", "float32"]

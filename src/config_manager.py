@@ -5,11 +5,10 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
-from .config import AppConfig
+from .config_defaults import DEFAULT_CONFIG
 
 
 logger = logging.getLogger(__name__)
@@ -43,7 +42,7 @@ def ensure_config_exists() -> Path:
     config_dir.mkdir(parents=True, exist_ok=True)
     
     # Create default config
-    default_config = AppConfig.DEFAULTS.copy()
+    default_config = DEFAULT_CONFIG.copy()
 
     with open(config_path, 'w') as f:
         yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
