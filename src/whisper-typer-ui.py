@@ -71,7 +71,8 @@ class WhisperTyperApp:
                 compute_type=self.config.compute_type,
                 language=self.config.primary_language,
                 beam_size=self.config.beam_size,
-                vad_filter=self.config.vad_filter
+                vad_filter=self.config.vad_filter,
+                cpu_workers=self.config.cpu_workers,
             )
         except ModelLoadError as e:
             logger.error(f"Model loading error: {e}")
