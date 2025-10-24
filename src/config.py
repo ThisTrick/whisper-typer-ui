@@ -27,16 +27,24 @@ class AppConfig:
         "primary_language": "en",
         "hotkey": "<ctrl>+<alt>+<space>",
         "model_size": "base",
-        "compute_type": "int8",
-        "device": "cpu",
+        "compute_type": "auto",
+        "device": "auto",
         "beam_size": 5,
         "vad_filter": True,
-        "chunk_duration": 3
+        "chunk_duration": 3,
+        "cpu_workers": "auto",
     }
-    
+
     VALID_MODEL_SIZES = ["tiny", "base", "small", "medium", "large-v3"]
-    VALID_COMPUTE_TYPES = ["int8", "float16", "float32"]
-    VALID_DEVICES = ["cpu", "cuda"]
+    VALID_COMPUTE_TYPES = [
+        "auto",
+        "int8",
+        "int8_float16",
+        "int8_float32",
+        "float16",
+        "float32",
+    ]
+    VALID_DEVICES = ["auto", "cpu", "cuda"]
     
     def __init__(self, config_path: str = None):
         """Load configuration from YAML file.
@@ -107,16 +115,21 @@ class AppConfig:
     def beam_size(self) -> int:
         """Beam size for transcription (lower = faster)."""
         return self._config["beam_size"]
-    
+
     @property
     def vad_filter(self) -> bool:
         """Whether to use VAD filter to skip silence."""
         return self._config["vad_filter"]
-    
+
     @property
     def chunk_duration(self) -> int:
         """Duration of each audio chunk in seconds for streaming transcription."""
         return self._config["chunk_duration"]
+
+    @property
+    def cpu_workers(self) -> str | int:
+        """Number of CPU worker threads for transcription ("auto" or positive int)."""
+        return self._config["cpu_workers"]
     
     def validate(self) -> None:
         """Validate configuration values.
@@ -145,12 +158,23 @@ class AppConfig:
         if compute not in self.VALID_COMPUTE_TYPES:
             raise ConfigError("compute_type",
                 f"Invalid compute type '{compute}'. Valid options: {', '.join(self.VALID_COMPUTE_TYPES)}")
-        
+
         # Validate device
         device = self.device
         if device not in self.VALID_DEVICES:
             raise ConfigError("device",
                 f"Invalid device '{device}'. Valid options: {', '.join(self.VALID_DEVICES)}")
+
+        # Validate cpu_workers
+        workers = self.cpu_workers
+        if isinstance(workers, str):
+            if workers != "auto":
+                raise ConfigError("cpu_workers", "Must be 'auto' or a positive integer")
+        elif isinstance(workers, int):
+            if workers < 1:
+                raise ConfigError("cpu_workers", f"cpu_workers must be >= 1, got: {workers}")
+        else:
+            raise ConfigError("cpu_workers", f"cpu_workers must be 'auto' or int, got: {type(workers)}")
         
         # Validate beam_size
         beam = self.beam_size

@@ -151,10 +151,11 @@ hotkey: "<ctrl>+<alt>+<space>"
 model_size: "tiny"
 
 # Performance tuning
-beam_size: 1        # 1=fastest, 5=most accurate
-vad_filter: true    # Skip silence (recommended)
-device: "cpu"       # "cuda" for GPU acceleration
-compute_type: "int8"  # int8=fastest, float32=highest quality
+beam_size: 1          # 1=fastest, 5=most accurate
+vad_filter: true      # Skip silence (recommended)
+device: "auto"        # auto-detects CUDA, override with "cpu" or "cuda"
+compute_type: "auto"  # auto -> int8 on CPU, float16 on GPU
+cpu_workers: "auto"   # auto -> use all CPU cores minus one
 ```
 
 ### Model Comparison
@@ -179,7 +180,9 @@ compute_type: "int8"  # int8=fastest, float32=highest quality
 model_size: "tiny"
 beam_size: 1
 vad_filter: true
-device: "cpu"  # or "cuda" if you have NVIDIA GPU
+device: "auto"       # Picks CUDA when available, CPU otherwise
+compute_type: "auto" # int8 on CPU, float16 on GPU
+cpu_workers: "auto"  # Use all CPU cores minus one when on CPU
 ```
 
 **Expected speed**: ~1 second for 10s audio on modern CPU
@@ -200,12 +203,35 @@ If you have an NVIDIA GPU:
 
 ```yaml
 device: "cuda"
+compute_type: "float16"  # automatically selected when compute_type: "auto"
 ```
 
 Install CUDA toolkit first:
 - [CUDA Downloads](https://developer.nvidia.com/cuda-downloads)
 
 **Speed boost**: 5-10x faster transcription! 🚀
+
+### CPU Optimization
+
+Whisper Typer now auto-tunes CPU workloads by default:
+
+- `cpu_workers: "auto"` keeps one core free for the UI and background tasks.
+- `compute_type: "auto"` selects `int8` on CPU for the best latency/quality trade-off.
+
+Override these if you want predictable resource usage, for example:
+
+```yaml
+device: "cpu"
+cpu_workers: 4   # Pin decoder to 4 CPU threads
+compute_type: "int8_float32"  # Slightly higher quality while staying quantized
+```
+
+### Mixed Environments
+
+When you leave `device: "auto"`, the app automatically switches to CUDA on systems
+with a compatible GPU (detected via PyTorch or `CUDA_VISIBLE_DEVICES`). It falls back
+to CPU when no GPU is exposed, so the same configuration works across desktops and
+laptops.
 
 ---
 
@@ -365,9 +391,17 @@ xclip -selection clipboard -o
    vad_filter: true
    ```
 
-3. Use GPU (NVIDIA only):
+3. Let the app tune itself:
+   ```yaml
+   device: "auto"
+   compute_type: "auto"
+   cpu_workers: "auto"
+   ```
+
+4. Use GPU (NVIDIA only) for large models:
    ```yaml
    device: "cuda"
+   compute_type: "float16"
    ```
 </details>
 

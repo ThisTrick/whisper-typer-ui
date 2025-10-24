@@ -1,7 +1,10 @@
 """Transcription module using faster-whisper."""
 
+import importlib
 import logging
+import os
 import time
+from typing import Any
 
 import numpy as np
 from faster_whisper import WhisperModel
@@ -23,7 +26,8 @@ class Transcriber:
         compute_type: str = "int8",
         language: str = "en",
         beam_size: int = 5,
-        vad_filter: bool = True
+        vad_filter: bool = True,
+        cpu_workers: str | int = "auto",
     ):
         """Initialize transcriber and load model.
         
@@ -39,23 +43,80 @@ class Transcriber:
             ModelLoadError: If model download/loading fails
         """
         self.model_size = model_size
-        self.device = device
-        self.compute_type = compute_type
+        self.device = self._resolve_device(device)
+        self.compute_type = self._resolve_compute_type(compute_type, self.device)
         self.language = language
         self.beam_size = beam_size
         self.vad_filter = vad_filter
-        
+        self.num_workers = self._resolve_workers(cpu_workers)
+
         # Load model
         try:
-            logger.info(f"Loading whisper model '{model_size}' ({compute_type} on {device})...")
+            logger.info(
+                "Loading whisper model '%s' (compute=%s, device=%s, workers=%s)...",
+                model_size,
+                self.compute_type,
+                self.device,
+                self.num_workers if self.num_workers else "default",
+            )
             self.model = WhisperModel(
                 model_size,
-                device=device,
-                compute_type=compute_type
+                device=self.device,
+                compute_type=self.compute_type
             )
             logger.info("Model loaded successfully")
         except Exception as e:
-            raise ModelLoadError(model_size, device, str(e))
+            raise ModelLoadError(model_size, self.device, str(e))
+
+    @staticmethod
+    def _resolve_device(device: str) -> str:
+        """Resolve user-requested device, auto-detecting GPU if available."""
+        if device != "auto":
+            return device
+
+        # Try PyTorch if available for robust CUDA detection
+        torch_spec = importlib.util.find_spec("torch")
+        if torch_spec is not None:
+            try:
+                torch = importlib.import_module("torch")
+                if hasattr(torch, "cuda") and torch.cuda.is_available():
+                    return "cuda"
+            except Exception:
+                logger.debug("PyTorch CUDA detection failed; falling back to CPU", exc_info=True)
+
+        # Fallback detection based on CUDA_VISIBLE_DEVICES
+        cuda_env = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+        if cuda_env not in ("", "-1"):
+            return "cuda"
+
+        return "cpu"
+
+    @staticmethod
+    def _resolve_compute_type(compute_type: str, device: str) -> str:
+        """Select compute precision based on device when auto is requested."""
+        if compute_type != "auto":
+            return compute_type
+
+        if device == "cuda":
+            return "float16"
+
+        return "int8"
+
+    @staticmethod
+    def _resolve_workers(cpu_workers: str | int) -> int | None:
+        """Determine CPU worker threads for the decoder."""
+        if isinstance(cpu_workers, int):
+            return max(cpu_workers, 1)
+
+        if cpu_workers != "auto":
+            logger.warning("Unrecognized cpu_workers setting '%s'; using library default", cpu_workers)
+            return None
+
+        # Auto-tune workers: reserve one core for UI/main thread when possible
+        cpu_count = os.cpu_count() or 1
+        if cpu_count <= 2:
+            return 1
+        return cpu_count - 1
     
     def transcribe(self, audio_buffer: np.ndarray) -> TranscriptionResult:
         """Transcribe audio buffer to text.
@@ -79,13 +140,18 @@ class Transcriber:
             
             # Transcribe with language hint
             # Note: This is the CPU-intensive blocking operation
+            transcribe_options: dict[str, Any] = {
+                "language": self.language,
+                "beam_size": self.beam_size,
+                "vad_filter": self.vad_filter,
+                "without_timestamps": True,
+            }
+            if self.num_workers:
+                transcribe_options["num_workers"] = self.num_workers
+
             segments, info = self.model.transcribe(
                 audio_buffer,
-                language=self.language,
-                beam_size=self.beam_size,
-                vad_filter=self.vad_filter,
-                # These settings can help reduce CPU blocking:
-                without_timestamps=True,  # Faster processing
+                **transcribe_options,
             )
             
             logger.info("Transcription model finished, collecting segments...")
@@ -127,12 +193,18 @@ class Transcriber:
         """
         try:
             # Transcribe chunk audio
+            transcribe_options: dict[str, Any] = {
+                "language": self.language,
+                "beam_size": self.beam_size,
+                "vad_filter": self.vad_filter,
+                "without_timestamps": True,
+            }
+            if self.num_workers:
+                transcribe_options["num_workers"] = self.num_workers
+
             segments, info = self.model.transcribe(
                 chunk.data,
-                language=self.language,
-                beam_size=self.beam_size,
-                vad_filter=self.vad_filter,
-                without_timestamps=True
+                **transcribe_options,
             )
             
             # Collect transcribed text
